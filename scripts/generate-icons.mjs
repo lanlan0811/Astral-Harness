@@ -1,115 +1,163 @@
 /**
- * Generates the application icon set.
+ * Exports the application icon set from the master artwork.
  *
- * Tauri needs PNG/ICO/ICNS checked in before it will bundle anything, and the usual
- * `tauri icon` route needs the CLI plus a source bitmap. This draws the mark
- * directly — a brand-to-accent gradient with a cut "A" — and encodes each container
- * by hand, so the icons are reproducible and reviewable as code.
+ * Tauri needs PNG/ICO/ICNS checked in before it will bundle anything. The master is
+ * `src-tauri/icons/Astral_icon_outer_black_removed.png`; everything else here is derived
+ * from it, so re-running after a design change keeps every size in step.
  *
  *   node scripts/generate-icons.mjs
+ *
+ * Downscaling is a box filter over *premultiplied* alpha. Averaging straight RGBA would
+ * drag the transparent corners' black into the edge pixels and leave a dark halo around
+ * the rounded square — premultiplying first is what keeps the border clean.
  */
-import { deflateSync } from "node:zlib";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { deflateSync, inflateSync } from "node:zlib";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src-tauri", "icons");
-
-/** Matches the app's `--color-brand` / `--color-accent` gradient. */
-const BRAND = [99, 102, 241];
-const ACCENT = [14, 165, 233];
-
-/** 4x supersampling — cheap antialiasing without a rasteriser. */
-const SAMPLES = 4;
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const ICONS_DIR = join(ROOT, "src-tauri", "icons");
+const MASTER = join(ICONS_DIR, "Astral_icon_outer_black_removed.png");
 
 // ---------------------------------------------------------------------------
-// drawing
+// decode
 // ---------------------------------------------------------------------------
 
 /**
- * Returns coverage in 0..1 for one point.
+ * Reads a non-interlaced 8-bit PNG into straight RGBA.
  *
- * The mark is a rounded square with a triangular counter cut out of it and a crossbar
- * left standing across that counter, which reads as an "A" at every size the OS will
- * actually render.
+ * Only what the master actually is: colour type 6, bit depth 8, no interlacing. Anything
+ * else throws rather than producing a quietly wrong image.
  */
-function coverage(x, y, size) {
-  const radius = size * 0.22;
-  if (!insideRoundedSquare(x, y, size, radius)) return 0;
+function decodePng(buffer) {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (!signature.every((byte, index) => buffer[index] === byte)) throw new Error("not a PNG");
 
-  const apexX = size * 0.5;
-  const apexY = size * 0.29;
-  const leftX = size * 0.31;
-  const leftY = size * 0.79;
-  const rightX = size * 0.69;
-  const rightY = size * 0.79;
+  let width = 0;
+  let height = 0;
+  const idat = [];
 
-  const inCounter = pointInTriangle(x, y, apexX, apexY, leftX, leftY, rightX, rightY);
-  if (!inCounter) return 1;
+  let offset = 8;
+  while (offset < buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString("ascii", offset + 4, offset + 8);
+    const body = buffer.subarray(offset + 8, offset + 8 + length);
 
-  // The crossbar is the only part of the counter that stays filled.
-  const barCenter = size * 0.6;
-  const barHalfHeight = size * 0.055;
-  const barHalfWidth = size * 0.2;
-  const inBar = Math.abs(y - barCenter) <= barHalfHeight && Math.abs(x - apexX) <= barHalfWidth;
-  return inBar ? 1 : 0;
-}
+    if (type === "IHDR") {
+      width = body.readUInt32BE(0);
+      height = body.readUInt32BE(4);
+      if (body[8] !== 8) throw new Error(`unsupported bit depth ${body[8]}`);
+      if (body[9] !== 6) throw new Error(`unsupported colour type ${body[9]} (expected RGBA)`);
+      if (body[12] !== 0) throw new Error("interlaced PNG is not supported");
+    } else if (type === "IDAT") {
+      idat.push(body);
+    } else if (type === "IEND") {
+      break;
+    }
+    offset += 12 + length;
+  }
 
-function insideRoundedSquare(x, y, size, radius) {
-  const inset = size * 0.045;
-  const min = inset;
-  const max = size - inset;
-  if (x < min || y < min || x > max || y > max) return false;
+  const raw = inflateSync(Buffer.concat(idat));
+  const bpp = 4;
+  const stride = width * bpp;
+  const out = Buffer.alloc(height * stride);
 
-  const cx = Math.min(Math.max(x, min + radius), max - radius);
-  const cy = Math.min(Math.max(y, min + radius), max - radius);
-  const dx = x - cx;
-  const dy = y - cy;
-  return dx * dx + dy * dy <= radius * radius;
-}
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    const line = raw.subarray(y * (stride + 1) + 1, y * (stride + 1) + 1 + stride);
+    const current = out.subarray(y * stride, (y + 1) * stride);
+    const above = y > 0 ? out.subarray((y - 1) * stride, y * stride) : null;
 
-function pointInTriangle(px, py, ax, ay, bx, by, cx, cy) {
-  const d1 = sign(px, py, ax, ay, bx, by);
-  const d2 = sign(px, py, bx, by, cx, cy);
-  const d3 = sign(px, py, cx, cy, ax, ay);
-  const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
-  const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
-  return !(hasNeg && hasPos);
-}
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? current[x - bpp] : 0;
+      const b = above ? above[x] : 0;
+      const c = above && x >= bpp ? above[x - bpp] : 0;
+      let value = line[x];
 
-function sign(px, py, ax, ay, bx, by) {
-  return (px - bx) * (ay - by) - (ax - bx) * (py - by);
-}
-
-function renderRgba(size) {
-  const pixels = Buffer.alloc(size * size * 4);
-  const step = 1 / SAMPLES;
-  const total = SAMPLES * SAMPLES;
-
-  for (let py = 0; py < size; py++) {
-    for (let px = 0; px < size; px++) {
-      let hits = 0;
-      for (let sy = 0; sy < SAMPLES; sy++) {
-        for (let sx = 0; sx < SAMPLES; sx++) {
-          const x = px + (sx + 0.5) * step;
-          const y = py + (sy + 0.5) * step;
-          if (coverage(x, y, size) > 0.5) hits++;
-        }
+      switch (filter) {
+        case 1: value += a; break;
+        case 2: value += b; break;
+        case 3: value += (a + b) >> 1; break;
+        case 4: value += paeth(a, b, c); break;
+        default: break;
       }
-      const alpha = Math.round((hits / total) * 255);
-      const t = (px / size + py / size) / 2;
-      const offset = (py * size + px) * 4;
-      pixels[offset] = Math.round(BRAND[0] + (ACCENT[0] - BRAND[0]) * t);
-      pixels[offset + 1] = Math.round(BRAND[1] + (ACCENT[1] - BRAND[1]) * t);
-      pixels[offset + 2] = Math.round(BRAND[2] + (ACCENT[2] - BRAND[2]) * t);
-      pixels[offset + 3] = alpha;
+      current[x] = value & 0xff;
     }
   }
-  return pixels;
+
+  return { width, height, data: out };
+}
+
+function paeth(a, b, c) {
+  const p = a + b - c;
+  const pa = Math.abs(p - a);
+  const pb = Math.abs(p - b);
+  const pc = Math.abs(p - c);
+  if (pa <= pb && pa <= pc) return a;
+  return pb <= pc ? b : c;
 }
 
 // ---------------------------------------------------------------------------
-// encoding
+// resize
+// ---------------------------------------------------------------------------
+
+/** Box-filter downscale in premultiplied alpha space. */
+function resize(source, size) {
+  const { width: sw, height: sh, data: src } = source;
+  const out = Buffer.alloc(size * size * 4);
+  const scaleX = sw / size;
+  const scaleY = sh / size;
+
+  for (let dy = 0; dy < size; dy++) {
+    const y0 = Math.floor(dy * scaleY);
+    const y1 = Math.max(y0 + 1, Math.ceil((dy + 1) * scaleY));
+
+    for (let dx = 0; dx < size; dx++) {
+      const x0 = Math.floor(dx * scaleX);
+      const x1 = Math.max(x0 + 1, Math.ceil((dx + 1) * scaleX));
+
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      let samples = 0;
+
+      for (let sy = y0; sy < y1 && sy < sh; sy++) {
+        for (let sx = x0; sx < x1 && sx < sw; sx++) {
+          const at = (sy * sw + sx) * 4;
+          const alpha = src[at + 3];
+          r += src[at] * alpha;
+          g += src[at + 1] * alpha;
+          b += src[at + 2] * alpha;
+          a += alpha;
+          samples += 1;
+        }
+      }
+
+      const at = (dy * size + dx) * 4;
+      if (a === 0 || samples === 0) {
+        out[at] = 0;
+        out[at + 1] = 0;
+        out[at + 2] = 0;
+        out[at + 3] = 0;
+        continue;
+      }
+
+      // Undo the premultiply. Averages land on whole numbers of alpha rarely enough that
+      // clamping is the honest guard.
+      out[at] = Math.min(255, Math.round(r / a));
+      out[at + 1] = Math.min(255, Math.round(g / a));
+      out[at + 2] = Math.min(255, Math.round(b / a));
+      out[at + 3] = Math.round(a / samples);
+    }
+  }
+
+  return { width: size, height: size, data: out };
+}
+
+// ---------------------------------------------------------------------------
+// encode
 // ---------------------------------------------------------------------------
 
 function crc32(buffer) {
@@ -130,16 +178,17 @@ function pngChunk(type, data) {
   return Buffer.concat([length, body, crc]);
 }
 
-function encodePng(size, pixels) {
-  const raw = Buffer.alloc(size * (size * 4 + 1));
-  for (let y = 0; y < size; y++) {
-    raw[y * (size * 4 + 1)] = 0; // filter: none
-    pixels.copy(raw, y * (size * 4 + 1) + 1, y * size * 4, (y + 1) * size * 4);
+function encodePng(image) {
+  const { width, height, data } = image;
+  const raw = Buffer.alloc(height * (width * 4 + 1));
+  for (let y = 0; y < height; y++) {
+    raw[y * (width * 4 + 1)] = 0; // filter: none
+    data.copy(raw, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
   }
 
   const header = Buffer.alloc(13);
-  header.writeUInt32BE(size, 0);
-  header.writeUInt32BE(size, 4);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
   header[8] = 8; // bit depth
   header[9] = 6; // colour type: RGBA
 
@@ -151,51 +200,41 @@ function encodePng(size, pixels) {
   ]);
 }
 
-/** ICO with PNG-compressed entries — supported by every OS Tauri ships to. */
-function encodeIco(entries) {
+/** ICO with PNG-compressed entries — understood by every OS Tauri ships to. */
+function encodeIco(images) {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0);
   header.writeUInt16LE(1, 2); // type: icon
-  header.writeUInt16LE(entries.length, 4);
+  header.writeUInt16LE(images.length, 4);
 
-  const directory = Buffer.alloc(16 * entries.length);
+  const directory = Buffer.alloc(16 * images.length);
   let offset = 6 + directory.length;
   const bodies = [];
 
-  entries.forEach((entry, index) => {
+  images.forEach((image, index) => {
     const at = index * 16;
-    directory[at] = entry.size >= 256 ? 0 : entry.size;
-    directory[at + 1] = entry.size >= 256 ? 0 : entry.size;
-    directory[at + 2] = 0; // palette
-    directory[at + 3] = 0;
+    directory[at] = image.size >= 256 ? 0 : image.size;
+    directory[at + 1] = image.size >= 256 ? 0 : image.size;
     directory.writeUInt16LE(1, at + 4); // colour planes
     directory.writeUInt16LE(32, at + 6); // bits per pixel
-    directory.writeUInt32LE(entry.data.length, at + 8);
+    directory.writeUInt32LE(image.data.length, at + 8);
     directory.writeUInt32LE(offset, at + 12);
-    offset += entry.data.length;
-    bodies.push(entry.data);
+    offset += image.data.length;
+    bodies.push(image.data);
   });
 
   return Buffer.concat([header, directory, ...bodies]);
 }
 
 /** ICNS holding PNG entries, which macOS accepts from 10.11 onward. */
-function encodeIcns(entries) {
-  const TYPES = {
-    16: "icp4",
-    32: "icp5",
-    64: "icp6",
-    128: "ic07",
-    256: "ic08",
-    512: "ic09",
-    1024: "ic10",
-  };
+function encodeIcns(images) {
+  const TYPES = { 16: "icp4", 32: "icp5", 64: "icp6", 128: "ic07", 256: "ic08", 512: "ic09", 1024: "ic10" };
 
-  const chunks = entries.map((entry) => {
+  const chunks = images.map(({ size, data }) => {
     const head = Buffer.alloc(8);
-    head.write(TYPES[entry.size], 0, 4, "ascii");
-    head.writeUInt32BE(entry.data.length + 8, 4);
-    return Buffer.concat([head, entry.data]);
+    head.write(TYPES[size], 0, 4, "ascii");
+    head.writeUInt32BE(data.length + 8, 4);
+    return Buffer.concat([head, data]);
   });
 
   const body = Buffer.concat(chunks);
@@ -207,23 +246,39 @@ function encodeIcns(entries) {
 
 // ---------------------------------------------------------------------------
 
-const SIZES = [16, 32, 48, 64, 128, 256, 512, 1024];
+mkdirSync(ICONS_DIR, { recursive: true });
+
+const master = decodePng(readFileSync(MASTER));
+console.log(`master: ${master.width}x${master.height}`);
+
 const cache = new Map();
-const png = (size) => {
-  if (!cache.has(size)) cache.set(size, encodePng(size, renderRgba(size)));
+const scaled = (size) => {
+  if (!cache.has(size)) cache.set(size, resize(master, size));
   return cache.get(size);
 };
+const pngOf = (size) => encodePng(scaled(size));
 
-mkdirSync(OUT_DIR, { recursive: true });
-
-for (const name of ["32x32.png", "128x128.png", "128x128@2x.png", "icon.png"]) {
-  const size = { "32x32.png": 32, "128x128.png": 128, "128x128@2x.png": 256, "icon.png": 512 }[name];
-  writeFileSync(join(OUT_DIR, name), png(size));
+for (const [name, size] of [
+  ["32x32.png", 32],
+  ["128x128.png", 128],
+  ["128x128@2x.png", 256],
+  ["icon.png", 512],
+]) {
+  writeFileSync(join(ICONS_DIR, name), pngOf(size));
   console.log(`${name} (${size}px)`);
 }
 
-writeFileSync(join(OUT_DIR, "Square150x150Logo.png"), png(150));
-writeFileSync(join(OUT_DIR, "StoreLogo.png"), png(50));
-writeFileSync(join(OUT_DIR, "icon.ico"), encodeIco(SIZES.filter((s) => [16, 32, 48, 256].includes(s)).map((size) => ({ size, data: png(size) }))));
-writeFileSync(join(OUT_DIR, "icon.icns"), encodeIcns([256, 512, 1024].map((size) => ({ size, data: png(size) }))));
-console.log("icon.ico, icon.icns, Square150x150Logo.png, StoreLogo.png");
+const icoSizes = [16, 32, 48, 64, 128, 256];
+writeFileSync(
+  join(ICONS_DIR, "icon.ico"),
+  encodeIco(icoSizes.map((size) => ({ size, data: pngOf(size) }))),
+);
+
+const icnsSizes = [16, 32, 128, 256, 512, 1024];
+writeFileSync(
+  join(ICONS_DIR, "icon.icns"),
+  encodeIcns(icnsSizes.map((size) => ({ size, data: pngOf(size) }))),
+);
+
+console.log(`icon.ico (${icoSizes.join(", ")})`);
+console.log(`icon.icns (${icnsSizes.join(", ")})`);

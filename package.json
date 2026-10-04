@@ -13,6 +13,7 @@
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "tauri": "tauri",
+    "icons": "node scripts/generate-icons.mjs",
     "dev": "npm run dev --workspace app",
     "smoke": "npm run smoke --workspace sidecar"
   },

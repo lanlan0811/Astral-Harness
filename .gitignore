@@ -6,10 +6,21 @@ npm-debug.log*
 # Dependency directories
 node_modules/
 preview/node_modules/
+sidecar/node_modules/
+app/node_modules/
 dist/
+sidecar/dist/
+app/dist/
 
 # Output of 'npm pack'
 *.tgz
+
+# Tauri / Rust. The sidecar binaries are downloaded by CI, not checked in — see
+# scripts/fetch-node.sh. app/dist, sidecar/dist and node_modules are already covered
+# by the unanchored rules above.
+/src-tauri/binaries/
+/src-tauri/target/
+/src-tauri/gen/
 
 # dotenv environment variable files
 .env

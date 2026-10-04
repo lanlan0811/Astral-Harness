@@ -1,0 +1,96 @@
+name: GUI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: gui-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Node 22, not 24: the official Node 24 binaries require macOS 13.5+, which would drop
+  # macOS 13.0-13.4. The sidecar ships whatever this pins.
+  NODE_VERSION_FILE: .nvmrc
+
+jobs:
+  test:
+    name: Tests and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  smoke:
+    name: End-to-end smoke
+    # The only thing that exercises AgentScope end to end without a real model: a fake
+    # OpenAI-compatible endpoint, a real Agent, a real permission round-trip.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace sidecar
+      - run: npm run smoke --workspace sidecar
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: [test, smoke]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-14
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+
+      - run: npm ci
+
+      - name: Fetch the Node sidecar binary
+        shell: bash
+        run: bash scripts/fetch-node.sh "${{ matrix.target }}"
+
+      # `beforeBuildCommand` builds the webview bundle and the sidecar for us.
+      - name: Build
+        run: npm run tauri build -- --target ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: astral-${{ matrix.target }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION_FILE: .nvmrc
+
+jobs:
+  desktop:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows x64
+            # Exactly one matrix leg publishes; the others only upload their artifacts.
+            publish: true
+            args: '--target x86_64-pc-windows-msvc'
+            node-target: x86_64-pc-windows-msvc
+            rust-target: x86_64-pc-windows-msvc
+          - os: macos-14
+            label: macOS universal
+            publish: false
+            args: '--target universal-apple-darwin'
+            node-targets: 'aarch64-apple-darwin x86_64-apple-darwin'
+            rust-target: aarch64-apple-darwin,x86_64-apple-darwin
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: npm
+
+      # Release notes live in the repository, not in the workflow — one file per tag, in
+      # both languages. Failing here rather than at publish time means a tag pushed
+      # without notes stops before anything is built.
+      - name: Verify the release notes exist
+        if: matrix.publish
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.en.md"
+          if [ ! -f "$notes" ]; then
+            echo "::error::Missing $notes. Write the release notes before tagging."
+            exit 1
+          fi
+          echo "Release notes: $notes"
+
+      - name: Install Rust targets
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add ${{ matrix.rust-target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.rust-target }}
+
+      - run: npm ci
+
+      # One binary per architecture; Tauri lipo's them into a universal sidecar.
+      - name: Fetch the Node sidecar binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          targets="${NODE_TARGETS:-${{ matrix.node-target }}}"
+          for target in $targets; do
+            bash scripts/fetch-node.sh "$target"
+          done
+        env:
+          NODE_TARGETS: ${{ matrix.node-targets }}
+
+      # Node 22 is the last line that still runs on macOS 13.0, so pin the deployment
+      # target rather than inheriting whatever the runner image defaults to.
+      - name: Build
+        run: npm run tauri build -- ${{ matrix.args }}
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '13.0'
+
+      - name: Collect installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: astral-${{ matrix.os }}-installers
+          path: |
+            src-tauri/target/*/release/bundle/nsis/*.exe
+            src-tauri/target/*/release/bundle/msi/*.msi
+            src-tauri/target/*/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 14
+
+      # Unsigned on purpose for the beta: macOS users clear Gatekeeper once, and Windows
+      # SmartScreen warns. The notes spell out the workaround. Wiring real signing is a
+      # follow-up, not a half-finished step here.
+      - name: Publish to the GitHub release
+        if: matrix.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: docs/releases/${{ github.ref_name }}.en.md
+          files: |
+            src-tauri/target/*/release/bundle/nsis/*.exe
+            src-tauri/target/*/release/bundle/msi/*.msi
+            src-tauri/target/*/release/bundle/dmg/*.dmg
+          fail_on_unmatched_files: false

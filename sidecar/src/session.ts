@@ -128,6 +128,9 @@ export class SessionManager {
 
       const decision = decide(await this.permissionMode(), parked[0].name);
       if (decision === "ask") {
+        // Clear `running` before announcing the ask: the UI answers the card the moment
+        // it sees this patch, and must not be told the task is still busy.
+        session.running = false;
         session.parked = { toolCalls: parked };
         this.patch(session.taskId, permissionPatch(parked));
         this.deps.emit({ type: "turn.ended", taskId: session.taskId, status: "idle" });
