@@ -5,6 +5,7 @@ npm-debug.log*
 
 # Dependency directories
 node_modules/
+preview/node_modules/
 dist/
 
 # Output of 'npm pack'
