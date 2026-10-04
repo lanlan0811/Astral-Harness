@@ -8,7 +8,7 @@
 
 export type TaskStatus = "idle" | "running" | "error";
 export type TaskSortBy = "updated" | "created";
-export type TaskViewMode = "grouped" | "projects" | "chronological" | "archived";
+export type TaskViewMode = "projects" | "chronological" | "archived";
 export type GroupBy = "project" | "chronological";
 
 export interface Project {

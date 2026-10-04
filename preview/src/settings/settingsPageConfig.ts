@@ -18,17 +18,13 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { id: "modelProvider", labelKey: "settings.modelProvider.title", icon: "package", group: "basics" },
   { id: "shortcuts", labelKey: "settings.shortcuts.title", icon: "keyboard", group: "basics" },
   { id: "browser", labelKey: "settings.browser.title", icon: "globe", group: "basics" },
-  { id: "computerUse", labelKey: "settings.computerUse.title", icon: "monitor", group: "basics" },
   { id: "workspaceFileSearch", labelKey: "settings.workspaceFileSearch.title", icon: "fileSearch", group: "basics" },
 
-  { id: "memory", labelKey: "settings.memory.title", icon: "brain", group: "agentCapabilities" },
   { id: "subagents", labelKey: "settings.subagents.title", icon: "bot", group: "agentCapabilities" },
-  { id: "plugins", labelKey: "settings.plugins.title", icon: "blocks", group: "agentCapabilities" },
   { id: "mcp", labelKey: "settings.mcp.title", icon: "cable", group: "agentCapabilities" },
   { id: "skills", labelKey: "settings.skills.title", icon: "wand", group: "agentCapabilities" },
   { id: "commands", labelKey: "settings.commands.title", icon: "terminal", group: "agentCapabilities" },
   { id: "automations", labelKey: "settings.automations.title", icon: "alarm", group: "agentCapabilities" },
-  { id: "hooks", labelKey: "settings.hooks.title", icon: "anchor", group: "agentCapabilities" },
 
   { id: "usage", labelKey: "settings.usage.title", icon: "chart", group: "dataAndStats" },
 ];

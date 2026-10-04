@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fuzzyMatchIn, fuzzyScoreFields, highlightRanges, rankByFuzzy } from "./fuzzy";
+import { fuzzyMatchIn, fuzzyScoreFields, rankByFuzzy } from "./fuzzy";
 
 describe("fuzzyMatchIn", () => {
   it("ranks a prefix match above a substring match", () => {
@@ -75,27 +75,5 @@ describe("rankByFuzzy", () => {
   it("honours the limit", () => {
     const ranked = rankByFuzzy("", items, (item) => [{ weight: 0, value: item.name }], 2);
     expect(ranked).toHaveLength(2);
-  });
-});
-
-describe("highlightRanges", () => {
-  it("finds every occurrence of every token", () => {
-    expect(highlightRanges("open open settings", "open")).toEqual([
-      [0, 4],
-      [5, 9],
-    ]);
-  });
-
-  it("merges overlapping ranges so <mark>s never nest", () => {
-    expect(highlightRanges("settings", "sett")).toEqual([[0, 4]]);
-  });
-
-  it("merges adjacent-in-order overlapping tokens", () => {
-    const ranges = highlightRanges("abcd", "ab cd");
-    expect(ranges).toEqual([[0, 4]]);
-  });
-
-  it("returns nothing for an empty query", () => {
-    expect(highlightRanges("anything", "  ")).toEqual([]);
   });
 });

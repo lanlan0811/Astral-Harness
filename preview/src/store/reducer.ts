@@ -50,7 +50,6 @@ export interface AppState {
   sidePaneTabs: SidePaneTab[];
   activeSidePaneTabId: string | null;
 
-  commandCenterOpen: boolean;
   settingsSectionId: string | null;
   onboardingOpen: boolean;
   renameTaskId: string | null;
@@ -87,7 +86,6 @@ export type AppAction =
   | { type: "sidePane/selectTab"; tabId: string }
   | { type: "sidePane/closeOthers"; tabId: string }
   | { type: "sidePane/closeAll" }
-  | { type: "dialog/setCommandCenter"; open: boolean }
   | { type: "dialog/openSettings"; sectionId: string | null }
   | { type: "dialog/setOnboarding"; open: boolean }
   | { type: "dialog/setRenameTask"; taskId: string | null }
@@ -146,7 +144,6 @@ export function createInitialState(input: {
     sidePaneTabs: input.sidePaneTabs ?? [],
     activeSidePaneTabId: input.activeSidePaneTabId ?? null,
 
-    commandCenterOpen: false,
     settingsSectionId: null,
     onboardingOpen: false,
     renameTaskId: null,
@@ -183,7 +180,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const next: AppState = { ...state, taskViewMode: action.mode };
       // Only the project view has anything to group by.
       if (action.mode === "projects") next.taskGroupBy = "project";
-      if (action.mode === "archived" || action.mode === "grouped") next.fileTreeOpen = false;
+      if (action.mode === "archived") next.fileTreeOpen = false;
       return next;
     }
 
@@ -345,9 +342,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "sidePane/closeAll":
       return { ...state, sidePaneTabs: [], activeSidePaneTabId: null, sidePaneVisible: false };
-
-    case "dialog/setCommandCenter":
-      return { ...state, commandCenterOpen: action.open };
 
     case "dialog/openSettings":
       return { ...state, settingsSectionId: action.sectionId };

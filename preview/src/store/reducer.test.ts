@@ -114,9 +114,15 @@ describe("appReducer — tasks", () => {
     expect(expanded.collapsedGroups).toEqual([]);
   });
 
-  it("forces chronological grouping out of the grouped view", () => {
-    const next = appReducer(base({ taskViewMode: "grouped" }), { type: "tasks/setViewMode", mode: "projects" });
+  it("restores project grouping when returning from the archive", () => {
+    const archived = base({ taskViewMode: "archived", taskGroupBy: "chronological" });
+    const next = appReducer(archived, { type: "tasks/setViewMode", mode: "projects" });
     expect(next.taskGroupBy).toBe("project");
+  });
+
+  it("closes the file tree when switching to the archive", () => {
+    const next = appReducer(base({ fileTreeOpen: true }), { type: "tasks/setViewMode", mode: "archived" });
+    expect(next.fileTreeOpen).toBe(false);
   });
 });
 

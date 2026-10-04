@@ -4,7 +4,6 @@ import { useIntl } from "./i18n";
 import { isApplePlatform, matchShortcutCommand } from "./shortcuts/registry";
 import { AppShell } from "./shell/AppShell";
 import { SettingsPage } from "./settings/SettingsPage";
-import { CommandCenterDialog } from "./commandcenter/CommandCenterDialog";
 import { Onboarding } from "./onboarding/Onboarding";
 import { TaskRenameDialog } from "./dialogs/TaskRenameDialog";
 import { cn } from "./lib/cn";
@@ -29,10 +28,6 @@ function useGlobalShortcuts() {
       if (!command) return;
 
       switch (command) {
-        case "openCommandCenter":
-          event.preventDefault();
-          dispatch({ type: "dialog/setCommandCenter", open: !state.commandCenterOpen });
-          break;
         case "openSettings":
           event.preventDefault();
           dispatch({ type: "dialog/openSettings", sectionId: state.settingsSectionId ? null : "general" });
@@ -64,7 +59,7 @@ function useGlobalShortcuts() {
 
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [apple, dispatch, setThemePreference, state.commandCenterOpen, state.onboardingOpen, state.settingsSectionId, state.sidebarVisible, theme.resolved]);
+  }, [apple, dispatch, setThemePreference, state.onboardingOpen, state.settingsSectionId, state.sidebarVisible, theme.resolved]);
 }
 
 export function App() {
@@ -92,7 +87,6 @@ export function App() {
         </div>
       ) : null}
 
-      <CommandCenterDialog />
       <TaskRenameDialog />
       <Onboarding />
 

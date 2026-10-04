@@ -59,8 +59,9 @@ describe("matchesBinding", () => {
 });
 
 describe("matchesAnyBinding", () => {
-  it("accepts when one of the bindings matches", () => {
+  it("accepts when one of several bindings matches", () => {
     expect(matchesAnyBinding(key({ key: "p", ctrlKey: true, shiftKey: true }), ["CmdOrCtrl+k", "CmdOrCtrl+Shift+p"], false)).toBe(true);
+    expect(matchesAnyBinding(key({ key: "p", ctrlKey: true, shiftKey: true }), ["CmdOrCtrl+Shift+p"], false)).toBe(true);
   });
 
   it("rejects when none match", () => {
@@ -69,8 +70,8 @@ describe("matchesAnyBinding", () => {
 });
 
 describe("matchShortcutCommand", () => {
-  it("resolves the command palette shortcut", () => {
-    expect(matchShortcutCommand(key({ key: "k", ctrlKey: true }), {}, false)).toBe("openCommandCenter");
+  it("resolves the sidebar toggle shortcut", () => {
+    expect(matchShortcutCommand(key({ key: "b", ctrlKey: true }), {}, false)).toBe("toggleSidebar");
   });
 
   it("returns null for an unbound key", () => {
@@ -78,9 +79,9 @@ describe("matchShortcutCommand", () => {
   });
 
   it("honours overrides over the default binding", () => {
-    const overrides = { openCommandCenter: ["CmdOrCtrl+j"] };
-    expect(matchShortcutCommand(key({ key: "j", ctrlKey: true }), overrides, false)).toBe("openCommandCenter");
-    expect(matchShortcutCommand(key({ key: "k", ctrlKey: true }), overrides, false)).toBeNull();
+    const overrides = { toggleSidebar: ["CmdOrCtrl+Shift+b"] };
+    expect(matchShortcutCommand(key({ key: "b", ctrlKey: true, shiftKey: true }), overrides, false)).toBe("toggleSidebar");
+    expect(matchShortcutCommand(key({ key: "b", ctrlKey: true }), overrides, false)).toBeNull();
   });
 });
 

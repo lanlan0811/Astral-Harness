@@ -19,8 +19,7 @@ export interface ShortcutCommand {
 
 export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   // window / global
-  { id: "openCommandCenter", labelKey: "quickPick.command.title.commandCenter", defaultBindings: ["CmdOrCtrl+k", "CmdOrCtrl+Shift+p"], scope: "global" },
-  { id: "openSettings", labelKey: "quickPick.command.settings", defaultBindings: ["CmdOrCtrl+,"], scope: "global" },
+  { id: "openSettings", labelKey: "command.openSettings", defaultBindings: ["CmdOrCtrl+,"], scope: "global" },
   { id: "findInTask", labelKey: "settings.shortcuts.title", defaultBindings: ["CmdOrCtrl+f"], scope: "global" },
   { id: "toggleSidebar", labelKey: "shell.toggleSidebar", defaultBindings: ["CmdOrCtrl+b"], scope: "global" },
   { id: "switchTheme", labelKey: "quickPick.command.switchTheme", defaultBindings: ["CmdOrCtrl+Shift+l"], scope: "global" },
@@ -32,10 +31,10 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: "navigateForward", labelKey: "shell.forward", defaultBindings: ["CmdOrCtrl+]"], scope: "global" },
   // Ctrl-only, never CmdOrCtrl: on macOS Cmd+M is physically identical to Ctrl+M,
   // so a CmdOrCtrl binding here would make the model menu unbindable.
-  { id: "openModelMenu", labelKey: "quickPick.command.title.model", defaultBindings: ["Ctrl+m"], scope: "global" },
+  { id: "openModelMenu", labelKey: "command.openModelMenu", defaultBindings: ["Ctrl+m"], scope: "global" },
   { id: "cycleSessionMode", labelKey: "chat.composer.mode.build", defaultBindings: ["Ctrl+Shift+m"], scope: "global" },
   { id: "cycleThoughtLevel", labelKey: "chat.composer.thoughtLevel", defaultBindings: ["Ctrl+t"], scope: "global" },
-  { id: "newTask", labelKey: "shell.newTask", defaultBindings: ["CmdOrCtrl+n"], scope: "global" },
+  { id: "newTask", labelKey: "command.newTask", defaultBindings: ["CmdOrCtrl+n"], scope: "global" },
   { id: "openWorkspace", labelKey: "quickPick.command.openWorkspace", defaultBindings: ["CmdOrCtrl+o"], scope: "global" },
   { id: "zoomIn", labelKey: "sidebar.zoomIn", defaultBindings: ["CmdOrCtrl+="], scope: "global" },
   { id: "zoomOut", labelKey: "sidebar.zoomOut", defaultBindings: ["CmdOrCtrl+-"], scope: "global" },

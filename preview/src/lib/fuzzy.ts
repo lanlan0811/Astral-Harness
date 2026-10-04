@@ -114,36 +114,3 @@ export function rankByFuzzy<T>(
   ranked.sort((a, b) => (a.score === b.score ? a.index - b.index : a.score - b.score));
   return typeof limit === "number" ? ranked.slice(0, limit) : ranked;
 }
-
-/**
- * Every character range in `text` covered by any of `query`'s tokens.
- * Overlapping ranges are merged so highlighting never nests <mark>s.
- */
-export function highlightRanges(text: string, query: string): Array<[number, number]> {
-  const tokens = [...new Set(query.trim().toLowerCase().split(/\s+/).filter(Boolean))];
-  if (tokens.length === 0) return [];
-
-  const lowerText = text.toLowerCase();
-  const ranges: Array<[number, number]> = [];
-  for (const token of tokens) {
-    let from = 0;
-    for (;;) {
-      const index = lowerText.indexOf(token, from);
-      if (index < 0) break;
-      ranges.push([index, index + token.length]);
-      from = index + token.length;
-    }
-  }
-  ranges.sort((a, b) => a[0] - b[0]);
-
-  const merged: Array<[number, number]> = [];
-  for (const range of ranges) {
-    const last = merged[merged.length - 1];
-    if (last && range[0] <= last[1]) {
-      last[1] = Math.max(last[1], range[1]);
-    } else {
-      merged.push([range[0], range[1]]);
-    }
-  }
-  return merged;
-}

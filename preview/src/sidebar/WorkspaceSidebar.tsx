@@ -7,7 +7,6 @@ import { FileTree } from "./FileTree";
 import { Button } from "../components/ui/button";
 import { ControlHintTooltip } from "../components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/controls";
-import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,20 +18,17 @@ import {
 } from "../components/ui/dropdown-menu";
 import {
   Archive,
-  Blocks,
   CalendarClock,
   Clock3,
   Folder,
   FolderOpen,
   FolderPlus,
-  Hash,
   ListFilter,
   Maximize2,
   History,
   MessageCirclePlus,
   MessageSquare,
   Minimize2,
-  Search,
   X,
 } from "lucide-react";
 import {
@@ -70,20 +66,9 @@ export function WorkspaceSidebar() {
           <div className="flex flex-col gap-1 px-2 py-2">
             <NewTaskButton />
             <SidebarEntry
-              icon={<Search className="size-4" />}
-              label={intl.formatMessage({ id: "sidebar.commandCenter" })}
-              shortcut="Ctrl+K"
-              onClick={() => dispatch({ type: "dialog/setCommandCenter", open: true })}
-            />
-            <SidebarEntry
               icon={<CalendarClock className="size-4" />}
               label={intl.formatMessage({ id: "sidebar.automations" })}
               onClick={() => dispatch({ type: "dialog/openSettings", sectionId: "automations" })}
-            />
-            <SidebarEntry
-              icon={<Blocks className="size-4" />}
-              label={intl.formatMessage({ id: "sidebar.pluginStore" })}
-              onClick={() => dispatch({ type: "dialog/openSettings", sectionId: "plugins" })}
             />
           </div>
 
@@ -95,7 +80,6 @@ export function WorkspaceSidebar() {
               {state.taskViewMode === "archived" ? <ArchivedList /> : null}
               {state.taskViewMode === "projects" ? <ProjectList /> : null}
               {state.taskViewMode === "chronological" ? <TimelineList /> : null}
-              {state.taskViewMode === "grouped" ? <GroupedList /> : null}
             </div>
           </div>
 
@@ -168,25 +152,7 @@ function TaskToolbar() {
   const intl = useIntl();
 
   return (
-    <div className="flex min-w-0 shrink-0 items-center justify-between gap-2 py-1 pl-2.5 pr-3">
-      <Tabs
-        value={state.taskViewMode === "grouped" ? "grouped" : "projects"}
-        onValueChange={(value) =>
-          dispatch({ type: "tasks/setViewMode", mode: value === "grouped" ? "grouped" : "projects" })
-        }
-      >
-        <TabsList>
-          <TabsTrigger value="grouped" className="pl-1.5">
-            <Hash className="size-3" />
-            {intl.formatMessage({ id: "sidebar.organizeGrouped" })}
-          </TabsTrigger>
-          <TabsTrigger value="projects">
-            <Folder className="size-3" />
-            {intl.formatMessage({ id: "sidebar.organizeByProject" })}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
+    <div className="flex min-w-0 shrink-0 items-center justify-end gap-2 py-1 pl-2.5 pr-3">
       <div className="flex shrink-0 items-center gap-1">
         <ControlHintTooltip
           title={intl.formatMessage({
@@ -440,40 +406,6 @@ function TimelineList() {
         ))}
       </div>
     </section>
-  );
-}
-
-function GroupedList() {
-  const state = useAppState();
-  const intl = useIntl();
-  const visible = selectVisibleTasks(state).filter((task) => !task.pinned);
-
-  if (visible.length === 0) {
-    return <EmptyHint message={intl.formatMessage({ id: "sidebar.noTasks" })} />;
-  }
-
-  const groups: Array<{ key: string; label: string; tasks: Task[] }> = [];
-  for (const task of visible) {
-    const project = state.projects.find((item) => item.id === task.projectId);
-    const label = project?.name ?? intl.formatMessage({ id: "sidebar.noProjects" });
-    const existing = groups.find((group) => group.label === label);
-    if (existing) existing.tasks.push(task);
-    else groups.push({ key: label, label, tasks: [task] });
-  }
-
-  return (
-    <div className="flex flex-col gap-1">
-      {groups.map((group) => (
-        <div key={group.key}>
-          <SectionHeader title={`${group.label} · ${group.tasks.length}`} />
-          <ul role="listbox" className="space-y-0.5">
-            {group.tasks.map((task) => (
-              <TaskRow key={task.id} task={task} />
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
   );
 }
 
