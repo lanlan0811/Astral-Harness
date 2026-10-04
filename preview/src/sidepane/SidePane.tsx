@@ -20,8 +20,7 @@ import {
 import { CodeViewerTab } from "./tabs/CodeViewerTab";
 import { GitReviewTab } from "./tabs/GitReviewTab";
 import { BrowserTab } from "./tabs/BrowserTab";
-import { PlanTab } from "./tabs/PlanTab";
-import { SubagentTab } from "./tabs/SubagentTab";
+import { PlanTab, SubagentTab } from "./tabs/PlanTab";
 import { TerminalOutput as TerminalSideTab } from "../terminal/TerminalDock";
 
 const TAB_MIN_WIDTH_PX = 60;
@@ -51,8 +50,6 @@ export function SidePane() {
   const intl = useIntl();
 
   const tabs = state.sidePaneTabs;
-  const activeTab = tabs.find((tab) => tab.id === state.activeSidePaneTabId) ?? null;
-
   return (
     <aside className="flex h-full min-h-0 flex-col border-l border-border bg-background" aria-label={intl.formatMessage({ id: "sidePane.openTab.title" })}>
       <div className="flex h-12 shrink-0 items-center justify-end px-2">
@@ -219,7 +216,7 @@ function OpenTabLauncher() {
               onClick={() =>
                 dispatch({
                   type: "sidePane/openTab",
-                  type: item.type,
+                  tabType: item.type,
                   title: intl.formatMessage({ id: item.labelId }),
                   target: item.type === "code" ? "src/auth/auth-client.ts" : "workspace",
                 })
@@ -255,7 +252,7 @@ export function SidePaneAddTabMenu() {
             onSelect={() =>
               dispatch({
                 type: "sidePane/openTab",
-                type: item.type,
+                tabType: item.type,
                 title: intl.formatMessage({ id: item.labelId }),
                 target: item.type === "code" ? "src/auth/auth-client.ts" : "workspace",
               })

@@ -21,8 +21,6 @@ import {
   Archive,
   Blocks,
   CalendarClock,
-  ChevronDown,
-  ChevronRight,
   Clock3,
   Folder,
   FolderOpen,
@@ -30,7 +28,7 @@ import {
   Hash,
   ListFilter,
   Maximize2,
-  MessageCircleCheck,
+  History,
   MessageCirclePlus,
   MessageSquare,
   Minimize2,
@@ -242,7 +240,7 @@ function TaskToolbar() {
                 onValueChange={(value) => dispatch({ type: "tasks/setSortBy", sortBy: value as "updated" | "created" })}
               >
                 <DropdownMenuRadioItem value="updated">
-                  <MessageCircleCheck className="size-4" />
+                  <History className="size-4" />
                   {intl.formatMessage({ id: "sidebar.sortByUpdated" })}
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="created">
@@ -323,7 +321,6 @@ function EmptyHint({ message }: { message: string }) {
 
 function ProjectList() {
   const state = useAppState();
-  const dispatch = useAppDispatch();
   const intl = useIntl();
 
   const projects = state.taskGroupBy === "project" ? selectProjectsWithTasks(state) : [];
@@ -482,6 +479,7 @@ function GroupedList() {
 
 function ArchivedList() {
   const state = useAppState();
+  const dispatch = useAppDispatch();
   const intl = useIntl();
   const archived = sortTasks(state.tasks.filter((task) => task.archived), "updated");
 
@@ -527,8 +525,7 @@ function ArchivedList() {
 const NOW = Date.UTC(2026, 9, 4, 9, 0, 0);
 
 function formatBucketLabel(timestamp: number): string {
-  const { intl, locale } = useIntl();
-  const formatMessage = intl.formatMessage;
+  const { locale, formatMessage } = useIntl();
   const now = new Date(NOW);
   const date = new Date(timestamp);
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();

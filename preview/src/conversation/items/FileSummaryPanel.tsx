@@ -18,7 +18,7 @@ export function FileSummaryPanel({ branch, files }: { branch: string; files: Too
       <div className="flex h-10 items-center justify-between gap-3 px-2 transition-colors hover:bg-hover">
         <button
           className="flex h-full min-w-0 flex-1 items-center gap-2 px-1 text-left text-ui-base text-foreground"
-          onClick={() => dispatch({ type: "sidePane/openTab", type: "git", title: "Working tree", target: "working-tree", badge: "Diff" })}
+          onClick={() => dispatch({ type: "sidePane/openTab", tabType: "git", title: "Working tree", target: "working-tree", badge: "Diff" })}
         >
           <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
             <circle cx="18" cy="18" r="3" />
@@ -49,7 +49,7 @@ export function FileSummaryPanel({ branch, files }: { branch: string; files: Too
             <button
               className="flex h-8 w-full items-center gap-2 px-2 text-ui-base text-foreground-subtle hover:bg-surface-hover"
               onClick={() =>
-                dispatch({ type: "sidePane/openTab", type: "code", title: fileName(file.path), target: file.path })
+                dispatch({ type: "sidePane/openTab", tabType: "code", title: fileName(file.path), target: file.path })
               }
             >
               <span className="min-w-0 flex-1 truncate text-left">{fileName(file.path)}</span>

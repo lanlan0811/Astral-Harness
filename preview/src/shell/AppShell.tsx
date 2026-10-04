@@ -7,6 +7,10 @@ import {
   clampSidebarWidth,
   SIDEBAR_KEYBOARD_STEP_PX,
   SIDEBAR_MIN_WIDTH_PX,
+  SIDE_PANE_MAX_WIDTH_RATIO,
+  SIDE_PANE_MIN_WIDTH_PX,
+  TERMINAL_MAX_HEIGHT_RATIO,
+  TERMINAL_MIN_HEIGHT_PX,
 } from "../store/reducer";
 import { WorkspaceSidebar } from "../sidebar/WorkspaceSidebar";
 import { ConversationPane } from "../conversation/ConversationPane";
@@ -36,12 +40,10 @@ export function AppShell() {
   const [resizing, setResizing] = useState(false);
 
   const sidebarVisible = state.sidebarVisible;
-  const sidebarWidth = state.sidebarVisible ? state.sidebarWidthPx : 0;
 
   const onSidebarPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
-      const containerWidthPx = shellRef.current?.getBoundingClientRect().width ?? window.innerWidth;
       dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startWidth: state.sidebarWidthPx };
       event.currentTarget.setPointerCapture(event.pointerId);
       setResizing(true);
@@ -156,7 +158,7 @@ export function AppShell() {
             <div className="h-1 shrink-0" data-drag-region="drag" />
 
             <PanelGroup direction="horizontal" className="min-h-0 flex-1">
-              <Panel id="conversation-column" minSize="35%" defaultSize={state.sidePaneVisible ? "52%" : undefined}>
+              <Panel id="conversation-column" minSize={35} defaultSize={state.sidePaneVisible ? 52 : undefined}>
                 <div
                   ref={conversationRef}
                   className={cn(
@@ -165,13 +167,13 @@ export function AppShell() {
                   )}
                 >
                   <PanelGroup direction="vertical" className="min-h-0 flex-1">
-                    <Panel id="conversation" minSize="35%">
+                    <Panel id="conversation" minSize={35}>
                       <ConversationPane />
                     </Panel>
                     {state.terminalVisible ? (
                       <>
                         <TerminalResizeHandle />
-                        <Panel id="terminal" minSize="140px" defaultSize="30%" maxSize="50%">
+                        <Panel id="terminal" minSize={TERMINAL_MIN_HEIGHT_PX} defaultSize={30} maxSize={TERMINAL_MAX_HEIGHT_RATIO * 100}>
                           <TerminalDock />
                         </Panel>
                       </>
@@ -183,7 +185,7 @@ export function AppShell() {
               {state.sidePaneVisible ? (
                 <>
                   <SidePaneResizeHandle />
-                  <Panel id="side-pane" minSize="240px" maxSize="65%" defaultSize="45%">
+                  <Panel id="side-pane" minSize={SIDE_PANE_MIN_WIDTH_PX} maxSize={SIDE_PANE_MAX_WIDTH_RATIO * 100} defaultSize={45}>
                     <SidePane />
                   </Panel>
                 </>

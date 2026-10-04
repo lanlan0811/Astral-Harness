@@ -2,7 +2,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../compo
 import { useIntl } from "../../i18n";
 import { cn } from "../../lib/cn";
 import { fileName, parentPath } from "../../lib/format";
-import type { ToolCall, ToolName, ToolStatus } from "../../store/types";
+import type { ToolCall, ToolName } from "../../store/types";
 import { DiffPreview, DiffStats } from "../DiffPreview";
 
 /** Tool name → status label. Deliberately the only running affordance is the shimmer

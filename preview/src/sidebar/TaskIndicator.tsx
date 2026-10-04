@@ -1,5 +1,5 @@
-import { cn } from "../../lib/cn";
-import type { Task } from "../../store/types";
+import { cn } from "../lib/cn";
+import type { Task } from "../store/types";
 
 /** Priority: error beats unread beats running beats idle. */
 export function taskIndicatorState(task: Task): "error" | "unread" | "running" | "idle" {

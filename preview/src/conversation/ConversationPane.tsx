@@ -20,7 +20,6 @@ const CONTENT_WIDTH_CLASS =
 
 export function ConversationPane() {
   const state = useAppState();
-  const dispatch = useAppDispatch();
   const intl = useIntl();
 
   const activeTask = state.tasks.find((task) => task.id === state.activeTaskId);
@@ -151,7 +150,7 @@ function ConversationItemView({ item }: { item: ConversationItem }) {
         <ToolCallBlock
           tool={item.tool}
           onOpenCodeViewer={(path) =>
-            dispatch({ type: "sidePane/openTab", type: "code", title: path.split("/").pop() ?? path, target: path })
+            dispatch({ type: "sidePane/openTab", tabType: "code", title: path.split("/").pop() ?? path, target: path })
           }
         />
       );
@@ -211,6 +210,3 @@ function ConversationEmptyState() {
     </div>
   );
 }
-
-/** Injected so the pane stays a pure component; see `src/mock/data.ts`. */
-import { MOCK_CONVERSATIONS as CONVERSATION_LOOKUP } from "../mock/data";

@@ -34,7 +34,7 @@ export function CodeViewerTab({ path }: { path: string }) {
             size="sm"
             className="h-7 rounded-lg text-ui-base text-foreground-subtle"
             onClick={() =>
-              dispatch({ type: "sidePane/openTab", type: "git", title: "Working tree", target: "working-tree", badge: "Diff" })
+              dispatch({ type: "sidePane/openTab", tabType: "git", title: "Working tree", target: "working-tree", badge: "Diff" })
             }
           >
             {intl.formatMessage({ id: "sidePane.tabs.git" })}

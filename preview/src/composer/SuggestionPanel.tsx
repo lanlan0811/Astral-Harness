@@ -77,7 +77,10 @@ export interface SuggestionPanelProps {
 /** Panel geometry mirrors the composer: it overlays the transcript, never pushes it. */
 export function SuggestionPanel({ match, suggestions, selectedIndex, onSelect, onHover }: SuggestionPanelProps) {
   const intl = useIntl();
-  const { groups, flat } = useMemo(() => groupSuggestions(suggestions), [suggestions]);
+  const { groups, flat } = useMemo(
+    () => ({ groups: groupSuggestions(suggestions), flat: suggestions }),
+    [suggestions],
+  );
 
   if (flat.length === 0) {
     return (

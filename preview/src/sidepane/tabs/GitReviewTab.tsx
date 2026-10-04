@@ -40,7 +40,7 @@ export function GitReviewTab() {
             <button
               className="flex h-9 w-full items-center gap-2 px-3 text-left text-ui-base transition-colors hover:bg-surface-hover"
               onClick={() =>
-                dispatch({ type: "sidePane/openTab", type: "code", title: fileName(diff.filePath), target: diff.filePath })
+                dispatch({ type: "sidePane/openTab", tabType: "code", title: fileName(diff.filePath), target: diff.filePath })
               }
             >
               <span className="min-w-0 flex-1 truncate text-foreground">{fileName(diff.filePath)}</span>

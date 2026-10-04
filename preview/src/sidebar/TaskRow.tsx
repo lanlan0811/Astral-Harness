@@ -13,7 +13,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "../components/ui/context-menu";
-import { Archive, FileTree, Pencil, Pin } from "lucide-react";
+import { Archive, ListTree, Pencil, Pin } from "lucide-react";
 import { useState } from "react";
 
 interface TaskRowProps {
@@ -115,7 +115,7 @@ export function TaskRow({ task, variant = "default", projectName }: TaskRowProps
                   dispatch({ type: "sidebar/setFileTreeOpen", open: true });
                 }}
               >
-                <FileTree className="size-3.5" />
+                <ListTree className="size-3.5" />
               </Button>
             </ControlHintTooltip>
 
@@ -181,7 +181,7 @@ export function TaskRow({ task, variant = "default", projectName }: TaskRowProps
           {intl.formatMessage({ id: "taskList.copySessionId" })}
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => dispatch({ type: "sidePane/openTab", type: "subagent", title: "Model trajectory", target: task.id })}>
+        <ContextMenuItem onSelect={() => dispatch({ type: "sidePane/openTab", tabType: "subagent", title: "Model trajectory", target: task.id })}>
           {intl.formatMessage({ id: "taskList.viewModelTrajectory" })}
         </ContextMenuItem>
       </ContextMenuContent>

@@ -1,8 +1,8 @@
-import { useIntl } from "../../i18n";
-import { useAppDispatch, useThemeActions, useThemeState } from "../../store/AppStore";
+import { useIntl } from "../i18n";
+import { useAppDispatch, useThemeActions, useThemeState } from "../store/AppStore";
 import { Settings } from "lucide-react";
-import { Button } from "../ui/button";
-import { ControlHintTooltip } from "../ui/tooltip";
+import { Button } from "../components/ui/button";
+import { ControlHintTooltip } from "../components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+} from "../components/ui/dropdown-menu";
 import { BarChart3, Globe, LogOut, Palette, PencilRuler, Rocket, ZoomIn } from "lucide-react";
 
 /**
@@ -33,7 +33,7 @@ export function SidebarFooter() {
     <footer className="flex shrink-0 flex-col gap-2.5 px-4 pt-2 pb-4">
       <div className="flex min-w-0 items-center gap-2">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild forceMount>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="lg"

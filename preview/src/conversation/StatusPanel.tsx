@@ -79,7 +79,7 @@ export function ConversationStatusPanel({ status }: { status: ConversationStatus
               <Buttonish
                 label={intl.formatMessage({ id: "chat.statusPanel.openReview" })}
                 onClick={() =>
-                  dispatch({ type: "sidePane/openTab", type: "git", title: "Working tree", target: "working-tree", badge: "Diff" })
+                  dispatch({ type: "sidePane/openTab", tabType: "git", title: "Working tree", target: "working-tree", badge: "Diff" })
                 }
               />
             </div>
@@ -115,7 +115,7 @@ export function ConversationStatusPanel({ status }: { status: ConversationStatus
                   <Buttonish
                     label={intl.formatMessage({ id: "chat.statusPanel.openRun" })}
                     onClick={() =>
-                      dispatch({ type: "sidePane/openTab", type: "terminal", title: shell.label, target: shell.id })
+                      dispatch({ type: "sidePane/openTab", tabType: "terminal", title: shell.label, target: shell.id })
                     }
                   />
                 </div>
@@ -136,7 +136,7 @@ export function ConversationStatusPanel({ status }: { status: ConversationStatus
                   <Buttonish
                     label={intl.formatMessage({ id: "chat.statusPanel.openRun" })}
                     onClick={() =>
-                      dispatch({ type: "sidePane/openTab", type: "subagent", title: agent.label, target: agent.id })
+                      dispatch({ type: "sidePane/openTab", tabType: "subagent", title: agent.label, target: agent.id })
                     }
                   />
                 </div>

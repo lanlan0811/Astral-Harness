@@ -15,11 +15,11 @@ export function PlanCard({ markdown, fileLabel }: { markdown: string; fileLabel:
     <section
       role="button"
       tabIndex={0}
-      onClick={() => dispatch({ type: "sidePane/openTab", type: "plan", title: fileLabel, target: fileLabel })}
+      onClick={() => dispatch({ type: "sidePane/openTab", tabType: "plan", title: fileLabel, target: fileLabel })}
       onKeyDown={(event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        dispatch({ type: "sidePane/openTab", type: "plan", title: fileLabel, target: fileLabel });
+        dispatch({ type: "sidePane/openTab", tabType: "plan", title: fileLabel, target: fileLabel });
       }}
       className="group w-full min-w-0 cursor-pointer overflow-hidden rounded-xl border border-card-border bg-card text-foreground transition-colors hover:border-border-hover"
     >
@@ -48,7 +48,7 @@ export function PlanCard({ markdown, fileLabel }: { markdown: string; fileLabel:
           className="absolute bottom-6 left-1/2 h-10 -translate-x-1/2 rounded-full pr-4 pl-6"
           onClick={(event) => {
             event.stopPropagation();
-            dispatch({ type: "sidePane/openTab", type: "plan", title: fileLabel, target: fileLabel });
+            dispatch({ type: "sidePane/openTab", tabType: "plan", title: fileLabel, target: fileLabel });
           }}
         >
           {intl.formatMessage({ id: "chat.planCard.viewFull" })}

@@ -10,6 +10,7 @@ import { Kbd } from "./kbd";
  */
 function TooltipContent({
   side = "top",
+  align,
   sideOffset = 2,
   title,
   description,
@@ -17,6 +18,7 @@ function TooltipContent({
   children,
 }: {
   side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
   sideOffset?: number;
   title: React.ReactNode;
   description?: React.ReactNode;
@@ -30,6 +32,7 @@ function TooltipContent({
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
         side={side}
+        align={align}
         sideOffset={sideOffset}
         collisionPadding={8}
         className={cn(
@@ -81,6 +84,7 @@ interface ControlHintTooltipProps {
   description?: React.ReactNode;
   shortcut?: string;
   side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
   sideOffset?: number;
   children: React.ReactNode;
   /** Force-mount the content (used when the trigger itself is a menu item). */
@@ -93,6 +97,7 @@ export function ControlHintTooltip({
   shortcut,
   side = "top",
   sideOffset = 2,
+  align,
   children,
 }: ControlHintTooltipProps) {
   return (
@@ -104,6 +109,7 @@ export function ControlHintTooltip({
           description={description}
           shortcut={shortcut}
           side={side}
+          align={align}
           sideOffset={sideOffset}
         />
       </TooltipPrimitive.Root>

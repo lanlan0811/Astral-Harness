@@ -29,8 +29,7 @@ export interface IntlInstance {
   formatMessage(descriptor: MessageDescriptor, values?: Record<string, string | number>): string;
 }
 
-interface IntlContextValue {
-  intl: IntlInstance;
+interface IntlContextValue extends IntlInstance {
   /** The locale actually in use. */
   locale: Locale;
   localePreference: LocalePreference;
@@ -91,7 +90,7 @@ export function IntlProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<IntlContextValue>(() => {
     const locale = resolveLocale(localePreference);
-    return { intl: createIntl(locale), locale, localePreference, setLocalePreference };
+    return { ...createIntl(locale), locale, localePreference, setLocalePreference };
   }, [localePreference, setLocalePreference]);
 
   return <IntlContext.Provider value={value}>{children}</IntlContext.Provider>;
@@ -105,5 +104,5 @@ export function useIntl(): IntlContextValue {
 
 /** Shorthand for components that only need to format strings. */
 export function useFormatMessage() {
-  return useIntl().intl.formatMessage;
+  return useIntl().formatMessage;
 }

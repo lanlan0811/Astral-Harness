@@ -1,7 +1,7 @@
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { cn } from "../../lib/cn";
+import { cn } from "../lib/cn";
 
 interface MarkdownProps {
   children: string;

@@ -27,6 +27,7 @@ export type Modifier = "CmdOrCtrl" | "Shift" | "Alt" | "Ctrl" | "Cmd" | "Meta";
 const MAC_ORDER: Modifier[] = ["Ctrl", "Alt", "Shift", "Cmd"];
 const PC_ORDER: Modifier[] = ["Ctrl", "Alt", "Shift", "Meta"];
 
+
 const MAC_GLYPHS: Record<string, string> = { Ctrl: "⌃", Alt: "⌥", Shift: "⇧", Cmd: "⌘", Meta: "⌘" };
 
 function isApplePlatform(): boolean {
@@ -53,10 +54,10 @@ export function formatShortcutCaps(binding: string, apple = isApplePlatform()): 
   const key = parts[parts.length - 1] ?? "";
   const modifiers = parts.slice(0, -1).filter((part): part is Modifier => part.length > 0);
 
-  const normalized = modifiers.map((modifier) =>
+  const normalized: string[] = modifiers.map((modifier) =>
     modifier === "CmdOrCtrl" ? (apple ? "Cmd" : "Ctrl") : modifier === "Meta" ? "Cmd" : modifier,
   );
-  const order = apple ? MAC_ORDER : PC_ORDER;
+  const order: string[] = apple ? MAC_ORDER : PC_ORDER;
   const ordered = order.filter((modifier) => normalized.includes(modifier));
 
   const caps = ordered.map((modifier) => (apple ? (MAC_GLYPHS[modifier] ?? modifier) : modifier));

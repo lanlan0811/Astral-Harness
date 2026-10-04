@@ -82,7 +82,7 @@ export type AppAction =
   | { type: "terminal/closeTab"; tabId: string }
   | { type: "terminal/selectTab"; tabId: string }
   | { type: "sidePane/toggle"; visible?: boolean }
-  | { type: "sidePane/openTab"; type: SidePaneTabType; title: string; target: string; badge?: string }
+  | { type: "sidePane/openTab"; tabType: SidePaneTabType; title: string; target: string; badge?: string }
   | { type: "sidePane/closeTab"; tabId: string }
   | { type: "sidePane/selectTab"; tabId: string }
   | { type: "sidePane/closeOthers"; tabId: string }
@@ -142,7 +142,7 @@ export function createInitialState(input: {
     terminalTabs: input.terminalTabs,
     activeTerminalId: input.terminalTabs[0]?.id ?? null,
 
-    sidePaneVisible: input.sidePaneVisible ?? input.sidePaneTabs !== undefined && input.sidePaneTabs.length > 0,
+    sidePaneVisible: input.sidePaneVisible ?? (input.sidePaneTabs !== undefined && input.sidePaneTabs.length > 0),
     sidePaneTabs: input.sidePaneTabs ?? [],
     activeSidePaneTabId: input.activeSidePaneTabId ?? null,
 
@@ -307,10 +307,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, sidePaneVisible: action.visible ?? !state.sidePaneVisible };
 
     case "sidePane/openTab": {
-      const id = `${action.type}:${action.target}`;
+      const id = `${action.tabType}:${action.target}`;
       const tabs = upsertSidePaneTab(state.sidePaneTabs, {
         id,
-        type: action.type,
+        type: action.tabType,
         title: action.title,
         target: action.target,
         badge: action.badge,
