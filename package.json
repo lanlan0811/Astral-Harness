@@ -1,0 +1,26 @@
+{
+  "name": "astral-harness",
+  "version": "0.0.1-beta",
+  "private": true,
+  "description": "Astral — a desktop coding agent built on the AgentScope TypeScript.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": [
+    "app",
+    "sidecar"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "tauri": "tauri",
+    "dev": "npm run dev --workspace app",
+    "smoke": "npm run smoke --workspace sidecar"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.1",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

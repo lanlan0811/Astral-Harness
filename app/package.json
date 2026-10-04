@@ -1,0 +1,43 @@
+{
+  "name": "@astral/app",
+  "version": "0.0.1-beta",
+  "private": true,
+  "type": "module",
+  "description": "Astral desktop app — the real frontend. Talks to the sidecar through Tauri.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/plugin-dialog": "^2.4.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.475.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^9.0.3",
+    "react-resizable-panels": "^2.1.7",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.13",
+    "@tauri-apps/cli": "^2.9.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "jsdom": "^26.1.0",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5.8.3",
+    "vite": "^7.1.9",
+    "vitest": "^3.2.4"
+  }
+}
