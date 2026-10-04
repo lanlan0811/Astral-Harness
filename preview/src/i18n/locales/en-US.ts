@@ -336,6 +336,7 @@ const enUS: Record<string, string> = {
   "quickPick.scope.all": "All",
   "quickPick.scope.commands": "Actions",
   "quickPick.scope.tasks": "Tasks",
+  "quickPick.scope.conversations": "Tasks",
   "quickPick.scope.files": "Files",
   "quickPick.section.suggested": "Suggested",
   "quickPick.section.chat": "Chat",

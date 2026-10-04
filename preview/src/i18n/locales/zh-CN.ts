@@ -336,6 +336,7 @@ const zhCN: Record<string, string> = {
   "quickPick.scope.all": "全部",
   "quickPick.scope.commands": "操作",
   "quickPick.scope.tasks": "任务",
+  "quickPick.scope.conversations": "任务",
   "quickPick.scope.files": "文件",
   "quickPick.section.suggested": "推荐",
   "quickPick.section.chat": "对话",

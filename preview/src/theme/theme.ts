@@ -32,14 +32,20 @@ export function resolveTheme(preference: ThemePreference, prefersDark: boolean):
   return prefersDark ? "astral-dark" : "astral-light";
 }
 
-/** Write the resolved theme onto <html>. `dark` drives `dark:` variants; the named
- *  class drives the branded palette. Both are always present so tokens resolve. */
+/**
+ * Write the resolved theme onto <html>.
+ *
+ * `dark` drives the `dark:` variants; the named class drives the branded palette.
+ * `color-scheme` only understands `light`/`dark` — writing the branded name there is
+ * silently ignored, which leaves native scrollbars and form controls on the OS theme.
+ */
 export function applyThemeToDocument(theme: ResolvedTheme) {
   const root = document.documentElement;
-  root.classList.toggle("dark", theme === "astral-dark");
-  root.classList.toggle("theme-astral-dark", theme === "astral-dark");
-  root.classList.toggle("theme-astral-light", theme === "astral-light");
-  root.style.colorScheme = theme;
+  const isDark = theme === "astral-dark";
+  root.classList.toggle("dark", isDark);
+  root.classList.toggle("theme-astral-dark", isDark);
+  root.classList.toggle("theme-astral-light", !isDark);
+  root.style.colorScheme = isDark ? "dark" : "light";
 }
 
 export function applyUiFontSize(px: number) {

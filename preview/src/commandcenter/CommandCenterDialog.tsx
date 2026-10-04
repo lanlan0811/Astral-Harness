@@ -66,8 +66,14 @@ export function CommandCenterDialog() {
     [dispatch, state, intl, setThemePreference, theme.resolved],
   );
 
+  // Keywords are weighted above the label: people search for what a command does
+  // ("review", "审查"), not for the word on the button.
   const matchedCommands = useMemo(
-    () => rankByFuzzy(query, commands, (command) => [{ weight: 0, value: command.label }]).map((entry) => entry.item),
+    () =>
+      rankByFuzzy(query, commands, (command) => [
+        { weight: 0, value: command.label },
+        { weight: 450, value: command.keywords.join(" ") },
+      ]).map((entry) => entry.item),
     [commands, query],
   );
 
@@ -85,7 +91,9 @@ export function CommandCenterDialog() {
     [query],
   );
 
-  const show = (candidate: Scope) => effectiveScope === "all" && scope === candidate;
+  // `all` means "every group"; any other scope pins to exactly one. The tab click and
+  // the `>` / `#` / `@` prefix both feed this same comparison.
+  const show = (candidate: Scope) => (effectiveScope === "all" ? scope === "all" || scope === candidate : effectiveScope === candidate);
 
   return (
     <Dialog

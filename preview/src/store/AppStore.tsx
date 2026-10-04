@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { appReducer, createInitialState, SIDEBAR_DEFAULT_WIDTH_PX, SIDEBAR_STORAGE_KEY, type AppAction, type AppState } from "./reducer";
+import { useIntl } from "../i18n";
 import { MOCK_ACTIVE_TASK_ID, MOCK_PROJECTS, MOCK_TASKS, MOCK_TERMINAL_TABS } from "../mock/data";
 import {
   applyThemeToDocument,
@@ -73,6 +74,7 @@ function readStoredFontSize(): number {
 }
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
+  const { locale } = useIntl();
   const [state, dispatch] = useReducer(
     appReducer,
     undefined,
@@ -109,6 +111,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     applyThemeToDocument(resolved);
   }, [resolved]);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   useEffect(() => {
     applyUiFontSize(uiFontSizePx);

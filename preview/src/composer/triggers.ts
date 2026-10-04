@@ -19,8 +19,10 @@ export interface TriggerMatch {
 }
 
 const SLASH_RE = /(^|\s)(\/)([^\s]*)$/;
-const MENTION_RE = /(^|[\s　-〿！-～])(@)([^\s@]*)$/u;
-// "联系邮箱@example.com" must not open the panel, so a domain-shaped query is vetoed.
+const MENTION_RE = /(^|[\s\p{Script=Han}　-〿＀-￯])(@)([^\s@]*)$/u;
+// The separator class includes Han ideographs so `看看@src` works, which means the
+// "an @ inside a word" guard has to be a veto rather than a separator restriction:
+// otherwise every email address would open the panel.
 const DOMAIN_LIKE_RE = /\S\.\S/;
 
 /** The last slash-command token in `text`, or null. */
@@ -56,7 +58,10 @@ export function replaceTrigger(text: string, match: TriggerMatch, replacement: s
   return `${text.slice(0, match.start)}${replacement}`;
 }
 
-/** Strip just the trigger token, for commands that run instead of inserting text. */
+/**
+ * Strip the trigger token entirely, for commands that run instead of inserting text.
+ * Trims both sides so removing `/model` from "run /model" leaves "run", not "run ".
+ */
 export function removeTrigger(text: string, match: TriggerMatch): string {
-  return replaceTrigger(text, match, "").trimStart();
+  return replaceTrigger(text, match, "").trim();
 }
