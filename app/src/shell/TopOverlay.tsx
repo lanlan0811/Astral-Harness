@@ -1,5 +1,6 @@
 import { useIntl } from "../i18n";
 import { useAppDispatch, useAppState } from "../store/AppStore";
+import { useBridgeActions } from "../store/bridgeActions";
 import { Button } from "../components/ui/button";
 import { ControlHintTooltip } from "../components/ui/tooltip";
 import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
@@ -17,6 +18,7 @@ export function TopOverlay() {
   const state = useAppState();
   const dispatch = useAppDispatch();
   const intl = useIntl();
+  const { createTask } = useBridgeActions();
 
   const showNewTask = !state.sidebarVisible || state.fileTreeOpen;
 
@@ -60,7 +62,7 @@ export function TopOverlay() {
               variant="ghost"
               size="icon-md"
               className="text-foreground hover:bg-hover"
-              onClick={() => dispatch({ type: "tasks/create", title: intl.formatMessage({ id: "sidebar.newThread" }), projectId: null })}
+              onClick={() => void createTask(intl.formatMessage({ id: "sidebar.newThread" }), null)}
             >
               <Plus className="size-4" />
             </Button>

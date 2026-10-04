@@ -113,6 +113,12 @@ async function main(): Promise<void> {
       "the turn to close",
     );
 
+    const errored = harness.events.find(
+      (event): event is Extract<SidecarEvent, { type: "turn.ended" }> =>
+        event.type === "turn.ended" && event.status === "error",
+    );
+    if (errored) failures.push(`the turn ended in an error: ${errored.error ?? "unknown"}`);
+
     check(failures, server.requestCount() >= 2, "the model was called for both the tool call and the reply");
 
     // 5. Conversation state survives a restart of the sidecar.
@@ -125,8 +131,10 @@ async function main(): Promise<void> {
   } finally {
     harness.close();
     await server.close();
-    await rm(dataDir, { recursive: true, force: true });
-    await rm(workspace, { recursive: true, force: true });
+    // Best effort: the sidecar may still be shutting down with the workspace as its
+    // working directory, and a locked temp dir is not a test failure.
+    await rm(dataDir, { recursive: true, force: true, maxRetries: 5 }).catch(() => undefined);
+    await rm(workspace, { recursive: true, force: true, maxRetries: 5 }).catch(() => undefined);
   }
 
   if (failures.length > 0) {

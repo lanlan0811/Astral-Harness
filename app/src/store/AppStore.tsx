@@ -8,9 +8,10 @@ import {
   type Dispatch,
   type ReactNode,
 } from "react";
-import { appReducer, createInitialState, SIDEBAR_DEFAULT_WIDTH_PX, SIDEBAR_STORAGE_KEY, type AppAction, type AppState } from "./reducer";
+import { appReducer, createInitialState, SIDEBAR_DEFAULT_WIDTH_PX, SIDEBAR_STORAGE_KEY, type AppAction, type AppState, type HydratedSettings } from "./reducer";
+import type { Project, Task } from "./types";
 import { useIntl } from "../i18n";
-import { MOCK_ACTIVE_TASK_ID, MOCK_PROJECTS, MOCK_TASKS, MOCK_TERMINAL_TABS } from "../mock/data";
+import { api, onEvent } from "../bridge";
 import {
   applyThemeToDocument,
   applyUiFontSize,
@@ -80,10 +81,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     undefined,
     (): AppState =>
       createInitialState({
-        projects: MOCK_PROJECTS,
-        tasks: MOCK_TASKS,
-        activeTaskId: MOCK_ACTIVE_TASK_ID,
-        terminalTabs: MOCK_TERMINAL_TABS,
+        // The sidecar owns this data. It arrives via the effects below, so the first
+        // paint is an empty shell rather than a list of things that do not exist yet.
+        projects: [],
+        tasks: [],
+        activeTaskId: null,
+        terminalTabs: [],
         sidebarWidthPx: readStoredWidth(),
       }),
   );
@@ -115,6 +118,52 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+
+  // Load persisted state and subscribe to the sidecar's event stream. Both are async, so
+  // the shell renders first and fills in — which is also why nothing here can throw into
+  // the first paint.
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const [settings, tasks, projects] = await Promise.all([
+          api.getSettings(),
+          api.listTasks() as Promise<Task[]>,
+          api.listProjects() as Promise<Project[]>,
+        ]);
+        if (cancelled) return;
+        dispatch({ type: "settings/hydrate", settings: settings as unknown as HydratedSettings });
+        dispatch({ type: "tasks/hydrate", tasks });
+        dispatch({ type: "projects/hydrate", projects });
+      } catch {
+        // The sidecar is not up yet, or the workspace is not open. The onboarding flow
+        // asks for it; nothing to recover here.
+      }
+    })();
+
+    const unsubscribe = onEvent((event) => {
+      switch (event.type) {
+        case "turn.patched":
+          dispatch({ type: "conversation/patch", patch: event.patch });
+          break;
+        case "turn.started":
+          dispatch({ type: "conversation/clearPermission" });
+          break;
+        case "task.updated":
+          dispatch({ type: "tasks/upsert", task: event.task });
+          break;
+        case "terminal.chunk":
+          dispatch({ type: "terminal/appendOutput", tabId: event.tabId, line: event.line });
+          break;
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     applyUiFontSize(uiFontSizePx);

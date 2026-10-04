@@ -6,6 +6,9 @@ import { SuggestionPanel, buildSuggestions, rankSuggestions } from "./Suggestion
 import { matchTrigger, removeTrigger, replaceTrigger } from "./triggers";
 import { Button } from "../components/ui/button";
 import { ControlHintTooltip } from "../components/ui/tooltip";
+import { useAppState } from "../store/AppStore";
+import { useBridgeActions } from "../store/bridgeActions";
+import { flattenTree } from "../sidebar/FileTree";
 
 /**
  * The prompt input.
@@ -21,11 +24,20 @@ export function Composer() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const hasHistory = true;
-  const running = false;
+  const state = useAppState();
+  const { sendMessage } = useBridgeActions();
+
+  // A task that has never been used has no history to follow up on.
+  const activeTask = state.tasks.find((task) => task.id === state.activeTaskId);
+  const hasHistory = (state.conversations[activeTask?.id ?? ""] ?? []).length > 0;
+  const running = activeTask?.status === "running";
 
   const match = useMemo(() => matchTrigger(text), [text]);
-  const suggestions = useMemo(() => (match ? rankSuggestions(buildSuggestions(match), match.query) : []), [match]);
+  const fileEntries = useMemo(() => flattenTree(state.fileTree), [state.fileTree]);
+  const suggestions = useMemo(
+    () => (match ? rankSuggestions(buildSuggestions(match, fileEntries), match.query) : []),
+    [fileEntries, match],
+  );
 
   const placeholderId = !hasHistory
     ? "chat.placeholder.fresh"
@@ -86,9 +98,11 @@ export function Composer() {
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!text.trim()) return;
-    // The preview has no agent to send to; clearing the draft is the whole behaviour.
+    const draft = text.trim();
+    if (!draft) return;
     onChange("");
+    // The reply arrives through the sidecar's event stream, not this call's result.
+    void sendMessage(draft);
   };
 
   return (

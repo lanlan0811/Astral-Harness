@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "../i18n";
 import { cn } from "../lib/cn";
 import { useAppDispatch, useAppState } from "../store/AppStore";
-import type { Conversation, ConversationItem } from "../store/types";
-import { MOCK_CONVERSATIONS } from "../mock/data";
+import type { ConversationItem, ConversationStatus } from "../store/types";
+import { useBridgeActions } from "../store/bridgeActions";
 import { buildTurns, isTurnRunning, type Turn } from "./turnModel";
 import { ReasoningBlock } from "./items/ReasoningBlock";
 import { ToolCallBlock } from "./items/ToolCallBlock";
@@ -23,7 +23,27 @@ export function ConversationPane() {
   const intl = useIntl();
 
   const activeTask = state.tasks.find((task) => task.id === state.activeTaskId);
-  const conversation: Conversation | undefined = activeTask ? MOCK_CONVERSATIONS[activeTask.id] : undefined;
+  // The transcript is accumulated in the store from the sidecar's patch stream. It only
+  // exists once the task has actually been used, so "no active task" and "no messages yet"
+  // share the same empty state.
+  const items: ConversationItem[] = activeTask ? (state.conversations[activeTask.id] ?? []) : [];
+
+  // No git backend and no subagents in the MVP, so the status panel reads zero across the
+  // board rather than showing numbers invented for the preview.
+  const status = useMemo<ConversationStatus>(
+    () => ({
+      branch: "",
+      dirtyFiles: 0,
+      additions: 0,
+      deletions: 0,
+      ahead: 0,
+      behind: 0,
+      goal: null,
+      backgroundShells: [],
+      subagents: [],
+    }),
+    [],
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [following, setFollowing] = useState(true);
@@ -36,7 +56,7 @@ export function ConversationPane() {
     const element = scrollRef.current;
     if (!element) return;
     element.scrollTop = element.scrollHeight;
-  }, [conversation, following]);
+  }, [items, following]);
 
   const onScroll = () => {
     const element = scrollRef.current;
@@ -55,7 +75,7 @@ export function ConversationPane() {
     setBackToBottomVisible(false);
   };
 
-  const isEmpty = !conversation || conversation.items.length === 0;
+  const isEmpty = items.length === 0;
 
   return (
     <section className="flex h-full min-h-0 flex-col bg-background">
@@ -63,12 +83,9 @@ export function ConversationPane() {
         <span className="min-w-0 flex-1 truncate text-ui-base text-foreground-subtle">
           {activeTask?.title ?? intl.formatMessage({ id: "chat.greeting" })}
         </span>
-        <span className="shrink-0 rounded-md bg-tag px-2 py-0.5 text-ui-xs text-foreground-subtle">
-          {intl.formatMessage({ id: "statusBar.previewOnly" })}
-        </span>
       </header>
 
-      {conversation ? <ConversationStatusPanel status={conversation.status} /> : null}
+      <ConversationStatusPanel status={status} />
 
       <div
         ref={scrollRef}
@@ -81,7 +98,7 @@ export function ConversationPane() {
         ) : (
           <div className="flex min-h-full flex-col" style={{ overflowAnchor: "none" }}>
             <div className={cn("mx-auto flex flex-col", CONTENT_WIDTH_CLASS)}>
-              {buildTurns(conversation.items).map((turn) => (
+              {buildTurns(items).map((turn) => (
                 <TurnSection key={turn.id} turn={turn} />
               ))}
             </div>
@@ -133,6 +150,7 @@ function TurnSection({ turn }: { turn: Turn }) {
 }
 
 function ConversationItemView({ item }: { item: ConversationItem }) {
+  const { respondPermission } = useBridgeActions();
   const state = useAppState();
   const dispatch = useAppDispatch();
 
@@ -157,7 +175,7 @@ function ConversationItemView({ item }: { item: ConversationItem }) {
     case "plan":
       return <PlanCard markdown={item.markdown} fileLabel={item.fileLabel} />;
     case "permission":
-      return <PermissionCard item={item} />;
+      return <PermissionCard item={item} onRespond={respondPermission} />;
     case "question":
       return <QuestionCard item={item} />;
     case "fileSummary":

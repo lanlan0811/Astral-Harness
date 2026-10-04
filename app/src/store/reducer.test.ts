@@ -94,10 +94,50 @@ describe("appReducer — sidebar", () => {
 });
 
 describe("appReducer — tasks", () => {
-  it("creates a task and selects it", () => {
-    const next = appReducer(base(), { type: "tasks/create", title: "New", projectId: null });
+  it("inserts a task the sidecar created", () => {
+    const incoming: Task = { ...task, id: "t2", title: "New" };
+    const next = appReducer(base(), { type: "tasks/upsert", task: incoming });
     expect(next.tasks).toHaveLength(2);
-    expect(next.activeTaskId).toBe(next.tasks[0].id);
+    expect(next.tasks[0].id).toBe("t2");
+  });
+
+  it("replaces an existing task rather than duplicating it", () => {
+    const next = appReducer(base(), { type: "tasks/upsert", task: { ...task, title: "Renamed" } });
+    expect(next.tasks).toHaveLength(1);
+    expect(next.tasks[0].title).toBe("Renamed");
+  });
+
+  it("folds a turn patch into the active task's transcript", () => {
+    const seeded = base({ activeTaskId: "t1" });
+    const started = appReducer(seeded, {
+      type: "conversation/patch",
+      patch: { kind: "assistantText.start", id: "b1" },
+    });
+    expect(started.conversations.t1).toHaveLength(1);
+
+    const streamed = appReducer(started, {
+      type: "conversation/patch",
+      patch: { kind: "assistantText.delta", id: "b1", delta: "hi" },
+    });
+    expect((streamed.conversations.t1[0] as { markdown: string }).markdown).toBe("hi");
+  });
+
+  it("clears the answered permission card when a turn resumes", () => {
+    const asked = appReducer(base({ activeTaskId: "t1" }), {
+      type: "conversation/patch",
+      patch: { kind: "permission", id: "c1", title: "Run a shell command", options: [{ id: "allow", label: "Allow" }] },
+    });
+    expect(asked.conversations.t1).toHaveLength(1);
+    const resumed = appReducer(asked, { type: "conversation/clearPermission" });
+    expect(resumed.conversations.t1).toHaveLength(0);
+  });
+
+  it("appends terminal output to the matching tab", () => {
+    const seeded = base();
+    const tabId = seeded.terminalTabs[0].id;
+    const next = appReducer(seeded, { type: "terminal/appendOutput", tabId, line: "hello" });
+    expect(next.terminalTabs[0].output).toEqual(["hello"]);
+    expect(next.terminalTabs[0].id).toBe(tabId);
   });
 
   it("unpins a task when it is archived", () => {

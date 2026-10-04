@@ -1,28 +1,56 @@
 import { useMemo, useState } from "react";
 import { useIntl } from "../i18n";
-import { useAppDispatch } from "../store/AppStore";
+import { useAppDispatch, useAppState } from "../store/AppStore";
 import { rankByFuzzy } from "../lib/fuzzy";
-import { MOCK_FILE_ENTRIES } from "../mock/data";
+import type { FileEntry } from "../bridge/protocol";
 import { Button } from "../components/ui/button";
 import { Search } from "lucide-react";
 import { cn } from "../lib/cn";
+
+export interface FlatEntry {
+  name: string;
+  relativePath: string;
+  kind: "file" | "directory";
+}
+
+/** Depth-first flatten, so the existing flat list keeps working off a nested tree. */
+export function flattenTree(entries: FileEntry[]): FlatEntry[] {
+  const out: FlatEntry[] = [];
+  const walk = (nodes: FileEntry[]) => {
+    for (const node of nodes) {
+      out.push({ name: node.name, relativePath: node.path, kind: node.isDirectory ? "directory" : "file" });
+      if (node.children) walk(node.children);
+    }
+  };
+  walk(entries);
+  return out;
+}
 
 /**
  * The file tree replaces the task list with a horizontal slide. Opened from a
  * project's "open file tree" action or programmatically.
  */
 export function FileTree() {
+  const state = useAppState();
   const dispatch = useAppDispatch();
   const intl = useIntl();
   const [query, setQuery] = useState("");
 
+  const entries = useMemo(() => flattenTree(state.fileTree), [state.fileTree]);
+
   const results = useMemo(() => {
-    if (!query.trim()) return MOCK_FILE_ENTRIES;
-    return rankByFuzzy(query, MOCK_FILE_ENTRIES, (entry) => [
+    if (!query.trim()) return entries;
+    return rankByFuzzy(query, entries, (entry) => [
       { weight: 0, value: entry.name },
       { weight: 50, value: entry.relativePath },
     ]).map((ranked) => ranked.item);
-  }, [query]);
+  }, [entries, query]);
+
+  const open = (entry: FlatEntry) => {
+    if (entry.kind === "file") {
+      dispatch({ type: "sidePane/openTab", tabType: "code", title: entry.name, target: entry.relativePath });
+    }
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -48,12 +76,19 @@ export function FileTree() {
             className="h-7 w-full rounded-lg bg-transparent pr-2 pl-7 text-ui-base text-foreground placeholder:text-foreground-subtlest hover:bg-surface-hover focus:bg-input"
           />
         </div>
+
+        {state.fileTreeTruncated ? (
+          <p className="mt-2 px-1 text-ui-xs text-foreground-subtle">
+            {intl.formatMessage({ id: "sidebar.fileTreeTruncated" })}
+          </p>
+        ) : null}
       </div>
 
       <ul role="tree" className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {results.map((entry) => (
           <li key={entry.relativePath} role="treeitem" aria-level={entry.kind === "directory" ? 1 : 2}>
             <button
+              onClick={() => open(entry)}
               className={cn(
                 "flex h-6 w-full items-center gap-1.5 rounded-md pr-1.5 text-left text-ui-base transition-colors hover:bg-surface-hover",
                 entry.kind === "directory" ? "pl-1.5 font-medium text-foreground" : "pl-6 text-foreground-subtle",

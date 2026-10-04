@@ -93,6 +93,7 @@ const zhCN: Record<string, string> = {
   "sidebar.logout": "退出登录",
   "sidebar.openSettings": "设置",
   "sidebar.searchFiles": "搜索文件",
+  "sidebar.fileTreeTruncated": "工作区较大 — 仅显示部分文件。",
   "sidebar.filesTitle": "文件",
   "sidebar.date.today": "今天",
   "sidebar.date.yesterday": "昨天",
@@ -277,6 +278,8 @@ const zhCN: Record<string, string> = {
   // ---- 交互卡片 ----
   "chat.permission.title": "需要授权",
   "chat.permission.confirm": "允许",
+  "chat.permission.allow": "允许",
+  "chat.permission.deny": "拒绝",
   "chat.permission.keyboardHint": "按 1–3 选择，↑↓ 移动，Enter 确认",
   "chat.permission.optionLabel": "选项 {n}",
   "chat.elicitation.title": "有个问题",
@@ -314,6 +317,8 @@ const zhCN: Record<string, string> = {
   "sidePane.browser.devtools": "开发者工具",
   "sidePane.code.copyPath": "复制路径",
   "sidePane.code.openExternal": "在编辑器中打开",
+  "sidePane.code.loading": "加载中…",
+  "sidePane.code.unreadable": "无法以文本方式读取该文件。",
   "sidePane.code.modePreview": "预览",
   "sidePane.code.modeCode": "代码",
   "sidePane.code.wrapLongLines": "长行自动换行",
@@ -322,6 +327,7 @@ const zhCN: Record<string, string> = {
   "sidePane.git.source": "来源",
   "sidePane.git.refresh": "刷新",
   "sidePane.git.emptyTitle": "没有需要审查的变更",
+  "sidePane.plan.empty": "该任务还没有计划。",
   "sidePane.git.emptyDescription": "工作区是干净的。",
   "sidePane.git.selectFile": "选择一个文件查看差异。",
   "sidePane.terminal.title": "终端",
@@ -334,6 +340,7 @@ const zhCN: Record<string, string> = {
   "terminal.paste": "粘贴",
   "terminal.close": "关闭终端",
   "terminal.openHint": "输入一条命令开始。",
+  "terminal.placeholder": "输入命令后按 Enter",
 
   // ---- 命令面板 ----
 
@@ -360,6 +367,8 @@ const zhCN: Record<string, string> = {
   "settings.modelProvider.description": "管理模型服务商，配置后即可在对话中选择。",
   "settings.modelProvider.add": "添加服务商",
   "settings.modelProvider.apiKey": "API Key",
+  "settings.modelProvider.model": "模型",
+  "settings.modelProvider.apiKeyStored": "已保存 — 输入可覆盖",
   "settings.modelProvider.apiKeyPlaceholder": "输入 API Key",
   "settings.modelProvider.baseUrl": "接口地址",
   "settings.modelProvider.name": "名称",
@@ -479,9 +488,7 @@ const zhCN: Record<string, string> = {
   "dialog.update.autoUpdate": "自动下载更新",
   "dialog.update.downloading": "下载中… {percent}",
 
-  // ---- 其他 ----
-  "statusBar.previewOnly": "预览构建 — 全部为 mock 数据",
-  "onboarding.open": "打开新手引导",
+  // ---- 其他 ----  "onboarding.open": "打开新手引导",
 };
 
 export default zhCN;

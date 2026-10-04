@@ -9,8 +9,10 @@ import { Switch } from "../components/ui/controls";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { SettingsGroupCard, SettingsRow, SettingsSectionHeading, SettingsSubheading } from "./SettingsParts";
 import { ShortcutSettings } from "./ShortcutSettings";
-import { MOCK_PROVIDERS } from "../mock/data";
 import { SETTINGS_SECTIONS } from "./settingsPageConfig";
+import { useBridgeActions } from "../store/bridgeActions";
+import { PROVIDER_IDS, providerLabel } from "../lib/agents";
+import { api } from "../bridge";
 
 export function SettingsContent({ sectionId }: { sectionId: string }) {
   switch (sectionId) {
@@ -227,10 +229,50 @@ function CodePreviewSample() {
   );
 }
 
+/**
+ * One configured provider. The MVP has a single model per session, so this is a form
+ * rather than a list of connections: pick the provider, paste the key, set the endpoint.
+ *
+ * The key is written to the sidecar's encrypted credential store, never to
+ * `setting.json`. The input renders blank once a key exists — showing it would put a
+ * secret on screen behind a password field that does not hide anything.
+ */
 function ModelProviderSection() {
   const intl = useIntl();
-  const [selected, setSelected] = React.useState("astral");
-  const provider = MOCK_PROVIDERS.find((item) => item.id === selected) ?? MOCK_PROVIDERS[0];
+  const { setProvider, setApiKey, getApiKey } = useBridgeActions();
+  const [providerId, setProviderId] = React.useState("openai");
+  const [modelName, setModelName] = React.useState("");
+  const [baseUrl, setBaseUrl] = React.useState("");
+  const [apiKey, setApiKeyValue] = React.useState("");
+  const [hasKey, setHasKey] = React.useState(false);
+
+  const apiKeyRef = `provider:${providerId}`;
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const settings = (await api.getSettings()) as { model?: { providerId?: string; modelName?: string; baseUrl?: string | null } };
+      if (cancelled) return;
+      if (settings.model?.providerId) setProviderId(settings.model.providerId);
+      setModelName(settings.model?.modelName ?? "");
+      setBaseUrl(settings.model?.baseUrl ?? "");
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setApiKeyValue("");
+    void getApiKey(apiKeyRef).then((value) => {
+      if (cancelled) return;
+      setHasKey(Boolean(value));
+    });
+    return () => { cancelled = true; };
+  }, [apiKeyRef, getApiKey]);
+
+  const applyProvider = (next: Record<string, unknown>) => {
+    void setProvider(next);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -247,56 +289,66 @@ function ModelProviderSection() {
 
       <div className="grid min-h-[36rem] grid-cols-[56px_minmax(0,1fr)] overflow-clip rounded-xl border border-border bg-card md:grid-cols-[224px_minmax(0,1fr)]">
         <div className="min-w-0 border-r border-border px-1.5 py-3 md:px-2 md:py-2">
-          {MOCK_PROVIDERS.map((item) => (
+          {PROVIDER_IDS.map((id) => (
             <button
-              key={item.id}
-              onClick={() => setSelected(item.id)}
+              key={id}
+              onClick={() => setProviderId(id)}
               className={cn(
                 "flex h-8 w-full max-md:size-8 max-md:justify-center items-center gap-2 rounded-lg border px-2 text-left text-ui-base font-medium transition-colors",
-                item.id === selected
+                id === providerId
                   ? "border-border-hover bg-card-selected text-foreground"
                   : "border-transparent text-foreground hover:border-border-hover/60",
               )}
             >
-              <span className="max-md:hidden">{item.name}</span>
+              <span className="max-md:hidden">{providerLabel(id)}</span>
             </button>
           ))}
         </div>
 
         <div className="relative min-w-0 p-4 pb-20 sm:p-6 sm:pb-24">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <span className="min-w-0 truncate text-ui-lg font-semibold text-foreground">{provider.name}</span>
+            <span className="min-w-0 truncate text-ui-lg font-semibold text-foreground">{providerLabel(providerId)}</span>
           </div>
+
           <SettingsGroupCard>
+            <SettingsRow label={intl.formatMessage({ id: "settings.modelProvider.model" })}>
+              <Input
+                value={modelName}
+                onChange={(event) => setModelName(event.target.value)}
+                onBlur={() => applyProvider({ providerId, modelName, baseUrl: baseUrl || null, apiKeyRef })}
+                placeholder="gpt-4o-mini"
+                className="w-full"
+              />
+            </SettingsRow>
             <SettingsRow label={intl.formatMessage({ id: "settings.modelProvider.apiKey" })}>
               <Input
-                type={provider.hasKey ? "password" : "text"}
-                placeholder={intl.formatMessage({ id: "settings.modelProvider.apiKeyPlaceholder" })}
+                type="password"
+                value={apiKey}
+                onChange={(event) => setApiKeyValue(event.target.value)}
+                onBlur={() => {
+                  if (!apiKey) return;
+                  void setApiKey(apiKeyRef, apiKey);
+                  setHasKey(true);
+                }}
+                placeholder={hasKey ? intl.formatMessage({ id: "settings.modelProvider.apiKeyStored" }) : intl.formatMessage({ id: "settings.modelProvider.apiKeyPlaceholder" })}
                 className="w-full"
               />
             </SettingsRow>
             <SettingsRow label={intl.formatMessage({ id: "settings.modelProvider.baseUrl" })}>
-              <Input placeholder="https://api.example.com/v1" className="w-full" />
+              <Input
+                value={baseUrl}
+                onChange={(event) => setBaseUrl(event.target.value)}
+                onBlur={() => applyProvider({ providerId, modelName, baseUrl: baseUrl || null, apiKeyRef })}
+                placeholder="https://api.openai.com/v1"
+                className="w-full"
+              />
             </SettingsRow>
           </SettingsGroupCard>
-
-          <div className="mt-4 flex flex-col gap-2">
-            {provider.models.map((model) => (
-              <div key={model.id} className="flex h-8 items-center gap-2 rounded-lg px-2 text-ui-base">
-                <span className="min-w-0 flex-1 truncate text-foreground">{model.name}</span>
-                <span className="shrink-0 text-ui-xs text-foreground-subtle">default</span>
-              </div>
-            ))}
-            <button className="flex h-12 items-center gap-2 rounded-lg border border-dashed border-border px-4 text-left text-ui-base text-foreground-subtle">
-              {intl.formatMessage({ id: "settings.modelProvider.addModel" })}
-            </button>
-          </div>
         </div>
       </div>
     </div>
   );
 }
-
 function PlaceholderSection({ sectionId }: { sectionId: string }) {
   const intl = useIntl();
   const section = SETTINGS_SECTIONS.find((item) => item.id === sectionId);
@@ -309,7 +361,7 @@ function PlaceholderSection({ sectionId }: { sectionId: string }) {
       />
       <SettingsGroupCard>
         <SettingsRow label={intl.formatMessage({ id: "settings.notImplemented" })}>
-          <span className="text-ui-sm text-foreground-subtle">{intl.formatMessage({ id: "statusBar.previewOnly" })}</span>
+          <span className="text-ui-sm text-foreground-subtle">{intl.formatMessage({ id: "settings.notImplemented.description" })}</span>
         </SettingsRow>
       </SettingsGroupCard>
     </div>

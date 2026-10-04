@@ -31,6 +31,15 @@ export const SIDE_PANE_MAX_WIDTH_RATIO = 0.65;
 
 export type PermissionMode = "build" | "edit" | "plan" | "yolo";
 
+/** The subset of the sidecar's settings the shell reflects into its own state. */
+export interface HydratedSettings {
+  model?: string;
+  thoughtLevel?: string;
+  permissionMode?: PermissionMode;
+  showReasoning?: boolean;
+  showTodos?: boolean;
+}
+
 export interface AppState {
   sidebarVisible: boolean;
   sidebarWidthPx: number;
@@ -50,6 +59,8 @@ export interface AppState {
   fileTree: FileEntry[];
   /** True when the workspace tree hit the walk limit and is incomplete. */
   fileTreeTruncated: boolean;
+  /** Absolute path of the opened workspace, or null before one is chosen. */
+  workspacePath: string | null;
 
   terminalVisible: boolean;
   terminalTabs: TerminalTab[];
@@ -87,6 +98,8 @@ export type AppAction =
   | { type: "conversation/patch"; patch: TurnPatch }
   | { type: "conversation/clearPermission" }
   | { type: "fileTree/set"; entries: FileEntry[]; truncated: boolean }
+  | { type: "workspace/set"; path: string | null }
+  | { type: "settings/hydrate"; settings: HydratedSettings }
   | { type: "tasks/togglePin"; taskId: string }
   | { type: "tasks/setArchived"; taskId: string; archived: boolean }
   | { type: "tasks/rename"; taskId: string; title: string }
@@ -155,6 +168,7 @@ export function createInitialState(input: {
     conversations: {},
     fileTree: [],
     fileTreeTruncated: false,
+    workspacePath: null,
 
     terminalVisible: false,
     terminalTabs: input.terminalTabs,
@@ -257,6 +271,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "fileTree/set":
       return { ...state, fileTree: action.entries, fileTreeTruncated: action.truncated };
 
+    case "workspace/set":
+      return { ...state, workspacePath: action.path };
+
+    case "settings/hydrate": {
+      const { model, thoughtLevel, permissionMode, showReasoning, showTodos } = action.settings;
+      return {
+        ...state,
+        model: model ?? state.model,
+        thoughtLevel: thoughtLevel ?? state.thoughtLevel,
+        permissionMode: permissionMode ?? state.permissionMode,
+        showReasoning: showReasoning ?? state.showReasoning,
+        showTodos: showTodos ?? state.showTodos,
+      };
+    }
+
     case "tasks/togglePin":
       return {
         ...state,
@@ -292,8 +321,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         const tab: TerminalTab = {
           id: `terminal-${Date.now()}`,
           title: "shell",
-          shell: "bash",
-          cwd: "~/projects/astral",
+          shell: "shell",
+          cwd: state.workspacePath ?? "",
           output: [],
         };
         return { ...state, terminalVisible: true, terminalTabs: [tab], activeTerminalId: tab.id };
@@ -305,8 +334,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const tab: TerminalTab = {
         id: `terminal-${Date.now()}-${state.terminalTabs.length}`,
         title: state.terminalTabs.length === 0 ? "shell" : `shell ${state.terminalTabs.length + 1}`,
-        shell: "bash",
-        cwd: "~/projects/astral",
+        shell: "shell",
+        cwd: state.workspacePath ?? "",
         output: [],
         ...action.tab,
       };

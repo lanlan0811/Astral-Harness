@@ -1,5 +1,6 @@
 import { useIntl } from "../i18n";
 import { useAppDispatch, useAppState } from "../store/AppStore";
+import { useBridgeActions } from "../store/bridgeActions";
 import { cn } from "../lib/cn";
 import { TaskRow } from "./TaskRow";
 import { SidebarFooter } from "./SidebarFooter";
@@ -100,13 +101,13 @@ export function WorkspaceSidebar() {
 }
 
 function NewTaskButton() {
-  const dispatch = useAppDispatch();
+  const { createTask } = useBridgeActions();
   const intl = useIntl();
   return (
     <Button
       variant="ghost"
       size="lg"
-      onClick={() => dispatch({ type: "tasks/create", title: intl.formatMessage({ id: "sidebar.newThread" }), projectId: null })}
+      onClick={() => void createTask(intl.formatMessage({ id: "sidebar.newThread" }), null)}
       className="group w-full shrink-0 justify-start gap-2 rounded-lg px-2.5 text-foreground hover:bg-surface-hover"
     >
       <MessageCirclePlus className="size-4" />

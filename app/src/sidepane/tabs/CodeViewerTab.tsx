@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import { useIntl } from "../../i18n";
 import { useAppDispatch, useThemeState } from "../../store/AppStore";
-import { MOCK_FILES } from "../../mock/data";
+import { api } from "../../bridge";
 import { cn } from "../../lib/cn";
 import { parentPath } from "../../lib/format";
 import { Button } from "../../components/ui/button";
@@ -11,7 +12,23 @@ export function CodeViewerTab({ path }: { path: string }) {
   const intl = useIntl();
   const dispatch = useAppDispatch();
   const theme = useThemeState();
-  const content = MOCK_FILES[path];
+  const [text, setText] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    setText(undefined);
+    api
+      .readFile(path)
+      .then((result) => {
+        if (!cancelled) setText(result.text);
+      })
+      .catch(() => {
+        if (!cancelled) setText(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [path]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
@@ -43,23 +60,27 @@ export function CodeViewerTab({ path }: { path: string }) {
       </div>
 
       <div className="min-h-0 flex-1">
-        {content ? (
+        {text === undefined ? (
+          <div className={cn("flex h-full items-center justify-center px-6 text-center text-ui-base text-foreground-subtlest")}>
+            {intl.formatMessage({ id: "sidePane.code.loading" })}
+          </div>
+        ) : text === null ? (
+          <div className={cn("flex h-full items-center justify-center px-6 text-center text-ui-base text-foreground-subtle")}>
+            {intl.formatMessage({ id: "sidePane.code.unreadable" })}
+          </div>
+        ) : (
           <div className="h-full overflow-auto">
             <DiffPreview
               diff={{
                 filePath: path,
                 additions: 0,
                 deletions: 0,
-                lines: content.split("\n").map((line, index) => ({ type: "context" as const, content: line, newLine: index + 1 })),
+                lines: text.split("\n").map((line, index) => ({ type: "context" as const, content: line, newLine: index + 1 })),
               }}
               showLineNumbers={theme.showLineNumbers}
               wrapLongLines={theme.wrapLongLines}
               maxHeightClass="max-h-none"
             />
-          </div>
-        ) : (
-          <div className={cn("flex h-full items-center justify-center px-6 text-center text-ui-base text-foreground-subtle")}>
-            {path}
           </div>
         )}
       </div>

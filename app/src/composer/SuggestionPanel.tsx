@@ -3,8 +3,8 @@ import { useIntl } from "../i18n";
 import { cn } from "../lib/cn";
 import { rankByFuzzy } from "../lib/fuzzy";
 import type { TriggerMatch } from "./triggers";
-import { MOCK_FILE_ENTRIES, MOCK_SKILLS, MOCK_SLASH_COMMANDS } from "../mock/data";
 import { fileName } from "../lib/format";
+import type { FlatEntry } from "../sidebar/FileTree";
 
 export interface Suggestion {
   id: string;
@@ -24,36 +24,21 @@ export interface Suggestion {
  * Descriptions carry a much heavier weight than labels on purpose — people
  * remember what a command *does*, not what it is called.
  */
-export function buildSuggestions(match: TriggerMatch): Suggestion[] {
-  if (match.kind === "slash") {
-    return [
-      ...MOCK_SLASH_COMMANDS.map((command) => ({
-        id: `cmd-${command.name}`,
-        value: `/${command.name} `,
-        label: `/${command.name}`,
-        description: command.description,
-        prefix: "/",
-        group: "commands" as const,
-      })),
-      ...MOCK_SKILLS.map((skill) => ({
-        id: `skill-${skill.name}`,
-        value: `$${skill.name} `,
-        label: `$${skill.name}`,
-        description: skill.description,
-        prefix: "$",
-        group: "skills" as const,
-      })),
-    ];
-  }
+export function buildSuggestions(match: TriggerMatch, files: FlatEntry[]): Suggestion[] {
+  // Slash commands and skills are not implemented in the MVP. Returning nothing for `/` is
+  // honest; the preview offered a list of commands that did not exist.
+  if (match.kind === "slash") return [];
 
-  return MOCK_FILE_ENTRIES.filter((entry) => entry.kind === "file").map((entry) => ({
-    id: `file-${entry.relativePath}`,
-    value: `@${entry.relativePath} `,
-    label: fileName(entry.relativePath),
-    description: entry.relativePath,
-    prefix: "@",
-    group: "files" as const,
-  }));
+  return files
+    .filter((entry) => entry.kind === "file")
+    .map((entry) => ({
+      id: `file-${entry.relativePath}`,
+      value: `@${entry.relativePath} `,
+      label: fileName(entry.relativePath),
+      description: entry.relativePath,
+      prefix: "@",
+      group: "files" as const,
+    }));
 }
 
 export function rankSuggestions(suggestions: Suggestion[], query: string): Suggestion[] {

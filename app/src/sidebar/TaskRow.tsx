@@ -188,6 +188,3 @@ export function TaskRow({ task, variant = "default", projectName }: TaskRowProps
     </ContextMenu>
   );
 }
-
-/** The preview has no clock of its own; anchor relative times to the mock data's "now". */
-const Date.now() = Date.UTC(2026, 9, 4, 9, 0, 0);

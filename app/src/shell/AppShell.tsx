@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { useIntl } from "../i18n";
 import { useAppDispatch, useAppState } from "../store/AppStore";
 import {
   AUTO_COLLAPSE_SIDEBAR_PX,
@@ -31,7 +30,6 @@ const AUTO_COLLAPSE_DEBOUNCE_MS = 300;
 export function AppShell() {
   const state = useAppState();
   const dispatch = useAppDispatch();
-  const intl = useIntl();
 
   const shellRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -197,9 +195,6 @@ export function AppShell() {
         <TopOverlay />
       </div>
 
-      <span className="sr-only" aria-live="polite">
-        {intl.formatMessage({ id: "statusBar.previewOnly" })}
-      </span>
     </div>
   );
 }

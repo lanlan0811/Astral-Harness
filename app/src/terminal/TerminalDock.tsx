@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useIntl } from "../i18n";
 import { useAppDispatch, useAppState } from "../store/AppStore";
 import { cn } from "../lib/cn";
 import { Button } from "../components/ui/button";
 import { ControlHintTooltip } from "../components/ui/tooltip";
+import { useBridgeActions } from "../store/bridgeActions";
+import { api } from "../bridge";
 
 /** The bottom dock. A floating rounded card, unlike the side pane's flush frame. */
 export function TerminalDock() {
@@ -61,6 +64,7 @@ export function TerminalDock() {
 }
 
 function TerminalTabTrigger({ tabId, title, active }: { tabId: string; title: string; active: boolean }) {
+  const state = useAppState();
   const dispatch = useAppDispatch();
   const intl = useIntl();
 
@@ -87,6 +91,7 @@ function TerminalTabTrigger({ tabId, title, active }: { tabId: string; title: st
         onClick={(event) => {
           event.stopPropagation();
           dispatch({ type: "terminal/closeTab", tabId });
+          void api.killCommand(state.activeTaskId ?? "workspace", tabId);
         }}
         aria-label={intl.formatMessage({ id: "terminal.close" })}
       >
@@ -98,10 +103,17 @@ function TerminalTabTrigger({ tabId, title, active }: { tabId: string; title: st
   );
 }
 
-/** Scrollback for the active session. The preview renders recorded lines, not a live PTY. */
+/**
+ * Scrollback plus a command line.
+ *
+ * Not a PTY: the sidecar runs the command with `child_process` and streams whole lines
+ * back. No colour, no cursor control, no interactive programs — see `sidecar/src/shell.ts`.
+ */
 export function TerminalOutput() {
   const state = useAppState();
   const intl = useIntl();
+  const { runCommand } = useBridgeActions();
+  const [draft, setDraft] = useState("");
 
   const active = state.terminalTabs.find((tab) => tab.id === state.activeTerminalId);
 
@@ -113,15 +125,34 @@ export function TerminalOutput() {
     );
   }
 
+  const submit = () => {
+    const command = draft.trim();
+    if (!command) return;
+    setDraft("");
+    void runCommand(active.id, command);
+  };
+
   return (
-    <div className="terminal-scroll-hide h-full overflow-auto bg-terminal-bg">
-      <pre className="font-mono text-ui-sm leading-5 whitespace-pre-wrap break-words text-terminal-fg">
-        <span className="text-foreground-subtlest">{active.cwd}</span>
-        {"\n"}
-        {active.output.length > 0 ? active.output.join("\n") : intl.formatMessage({ id: "terminal.openHint" })}
-        {"\n"}
-        <span className="inline-block size-3 translate-y-0.5 bg-foreground" />
-      </pre>
+    <div className="flex h-full flex-col bg-terminal-bg">
+      <div className="terminal-scroll-hide min-h-0 flex-1 overflow-auto">
+        <pre className="font-mono text-ui-sm leading-5 whitespace-pre-wrap break-words text-terminal-fg">
+          <span className="text-foreground-subtlest">{active.cwd}</span>
+          {"\n"}
+          {active.output.length > 0 ? active.output.join("\n") : intl.formatMessage({ id: "terminal.openHint" })}
+        </pre>
+      </div>
+      <div className="flex shrink-0 items-center gap-2 border-t border-border/60 px-3 py-1.5">
+        <span className="font-mono text-ui-sm text-foreground-subtlest">$</span>
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.nativeEvent.isComposing) submit();
+          }}
+          placeholder={intl.formatMessage({ id: "terminal.placeholder" })}
+          className="min-w-0 flex-1 bg-transparent font-mono text-ui-sm text-terminal-fg outline-none placeholder:text-foreground-subtlest"
+        />
+      </div>
     </div>
   );
 }

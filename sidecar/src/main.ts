@@ -70,10 +70,21 @@ async function main(): Promise<void> {
 
     "tasks.delete": (payload: { taskId: string }) => tasks.remove(payload.taskId),
 
-    "agent.send": (payload: { taskId: string; text: string }) => sessions.sendMessage(payload.taskId, payload.text),
+    "agent.send": (payload: { taskId: string; text: string }) => {
+      // Fire and forget. A turn can run for minutes, and the reply arrives as a stream of
+      // events, so holding the request open would only risk timing the caller out.
+      sessions.sendMessage(payload.taskId, payload.text).catch((error) => {
+        emit({ type: "turn.ended", taskId: payload.taskId, status: "error", error: messageOf(error) });
+      });
+      return { started: true };
+    },
 
-    "agent.respondPermission": (payload: { taskId: string; approved: boolean }) =>
-      sessions.respondPermission(payload.taskId, payload.approved),
+    "agent.respondPermission": (payload: { taskId: string; approved: boolean }) => {
+      sessions.respondPermission(payload.taskId, payload.approved).catch((error) => {
+        emit({ type: "turn.ended", taskId: payload.taskId, status: "error", error: messageOf(error) });
+      });
+      return { resumed: true };
+    },
 
     "agent.interrupt": (payload: { taskId: string }) => sessions.interrupt(payload.taskId),
 
@@ -124,6 +135,10 @@ async function handle(
       error: { message: error instanceof Error ? error.message : String(error) },
     });
   }
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 main().catch((error) => {

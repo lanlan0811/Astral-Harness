@@ -93,6 +93,7 @@ const enUS: Record<string, string> = {
   "sidebar.logout": "Sign out",
   "sidebar.openSettings": "Settings",
   "sidebar.searchFiles": "Search files",
+  "sidebar.fileTreeTruncated": "Large workspace — showing the first files only.",
   "sidebar.filesTitle": "Files",
   "sidebar.date.today": "Today",
   "sidebar.date.yesterday": "Yesterday",
@@ -277,6 +278,8 @@ const enUS: Record<string, string> = {
   // ---- interaction cards ----
   "chat.permission.title": "Permission required",
   "chat.permission.confirm": "Allow",
+  "chat.permission.allow": "Allow",
+  "chat.permission.deny": "Deny",
   "chat.permission.keyboardHint": "Use 1–3 to choose, ↑↓ to move, Enter to confirm",
   "chat.permission.optionLabel": "Option {n}",
   "chat.elicitation.title": "Question",
@@ -314,6 +317,8 @@ const enUS: Record<string, string> = {
   "sidePane.browser.devtools": "Developer tools",
   "sidePane.code.copyPath": "Copy path",
   "sidePane.code.openExternal": "Open in editor",
+  "sidePane.code.loading": "Loading…",
+  "sidePane.code.unreadable": "This file could not be read as text.",
   "sidePane.code.modePreview": "Preview",
   "sidePane.code.modeCode": "Code",
   "sidePane.code.wrapLongLines": "Wrap long lines",
@@ -322,6 +327,7 @@ const enUS: Record<string, string> = {
   "sidePane.git.source": "Source",
   "sidePane.git.refresh": "Refresh",
   "sidePane.git.emptyTitle": "No changes to review",
+  "sidePane.plan.empty": "No plan for this task yet.",
   "sidePane.git.emptyDescription": "Your working tree is clean.",
   "sidePane.git.selectFile": "Select a file to see the diff.",
   "sidePane.terminal.title": "Terminal",
@@ -334,6 +340,7 @@ const enUS: Record<string, string> = {
   "terminal.paste": "Paste",
   "terminal.close": "Close terminal",
   "terminal.openHint": "Run a command to get started.",
+  "terminal.placeholder": "Type a command and press Enter",
 
   // ---- command palette ----
 
@@ -360,6 +367,8 @@ const enUS: Record<string, string> = {
   "settings.modelProvider.description": "Manage model providers. Once configured they can be picked in chat.",
   "settings.modelProvider.add": "Add provider",
   "settings.modelProvider.apiKey": "API key",
+  "settings.modelProvider.model": "Model",
+  "settings.modelProvider.apiKeyStored": "Stored — type to replace",
   "settings.modelProvider.apiKeyPlaceholder": "Enter API key",
   "settings.modelProvider.baseUrl": "Base URL",
   "settings.modelProvider.name": "Name",
@@ -479,9 +488,7 @@ const enUS: Record<string, string> = {
   "dialog.update.autoUpdate": "Download updates automatically",
   "dialog.update.downloading": "Downloading… {percent}",
 
-  // ---- misc ----
-  "statusBar.previewOnly": "Preview build — mock data only",
-  "onboarding.open": "Open onboarding",
+  // ---- misc ----  "onboarding.open": "Open onboarding",
 };
 
 export default enUS;

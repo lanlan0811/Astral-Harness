@@ -1,7 +1,8 @@
 import { useIntl } from "../i18n";
 import { useAppDispatch, useAppState } from "../store/AppStore";
 import type { PermissionMode } from "../store/reducer";
-import { MOCK_MODELS, MOCK_THOUGHT_LEVELS } from "../mock/data";
+import { THOUGHT_LEVELS } from "../lib/agents";
+import { useBridgeActions } from "../store/bridgeActions";
 import { cn } from "../lib/cn";
 import { Button } from "../components/ui/button";
 import { ControlHintTooltip } from "../components/ui/tooltip";
@@ -16,9 +17,6 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import { formatCompactNumber } from "../lib/format";
@@ -135,8 +133,8 @@ export function ComposerTrailingActions() {
   const state = useAppState();
   const dispatch = useAppDispatch();
   const intl = useIntl();
+  const { setThoughtLevel } = useBridgeActions();
 
-  const currentModel = MOCK_MODELS.find((model) => model.id === state.model) ?? MOCK_MODELS[0];
   const usedFraction = CONTEXT_USED / CONTEXT_TOTAL;
 
   return (
@@ -204,38 +202,14 @@ export function ComposerTrailingActions() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="h-7 gap-1 rounded-lg pr-1.5 pl-2 text-ui-base whitespace-nowrap">
             <Package className="size-4 shrink-0 text-foreground-subtle" />
-            <span className="max-w-48 truncate">{currentModel.name}</span>
+            <span className="max-w-48 truncate">{state.model}</span>
             <ChevronDown className="size-3.5 shrink-0 text-foreground-subtle" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" sideOffset={2} className="w-72">
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="min-h-8">
-              {currentModel.provider}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="max-h-72">
-              {MOCK_MODELS.filter((model) => model.provider === currentModel.provider).map((model) => (
-                <DropdownMenuRadioItem key={model.id} value={model.id} onSelect={() => dispatch({ type: "composer/setModel", model: model.id })}>
-                  <span className="min-w-0 flex-1 truncate text-left">{model.name}</span>
-                  {model.badge ? (
-                    <span className="shrink-0 rounded-full bg-surface px-1 py-px text-ui-xs font-medium text-foreground-subtle">
-                      {model.badge}
-                    </span>
-                  ) : null}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="min-h-8">Anthropic</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="max-h-72">
-              {MOCK_MODELS.filter((model) => model.provider === "Anthropic").map((model) => (
-                <DropdownMenuRadioItem key={model.id} value={model.id} onSelect={() => dispatch({ type: "composer/setModel", model: model.id })}>
-                  <span className="min-w-0 flex-1 truncate text-left">{model.name}</span>
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+          <DropdownMenuItem disabled>
+            <span className="min-w-0 flex-1 truncate text-left text-foreground-subtle">{state.model}</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => dispatch({ type: "dialog/openSettings", sectionId: "modelProvider" })}>
             {intl.formatMessage({ id: "chat.composer.model.manage" })}
@@ -251,7 +225,7 @@ export function ComposerTrailingActions() {
               <span
                 className="absolute bottom-0 left-0 w-full rounded-full bg-success transition-[height] duration-300"
                 style={{
-                  height: `${((MOCK_THOUGHT_LEVELS.indexOf(state.thoughtLevel as (typeof MOCK_THOUGHT_LEVELS)[number]) + 1) / MOCK_THOUGHT_LEVELS.length) * 100}%`,
+                  height: `${((THOUGHT_LEVELS.indexOf(state.thoughtLevel as (typeof THOUGHT_LEVELS)[number]) + 1) / THOUGHT_LEVELS.length) * 100}%`,
                 }}
               />
             </span>
@@ -265,9 +239,9 @@ export function ComposerTrailingActions() {
           <DropdownMenuLabel className="sr-only">{intl.formatMessage({ id: "chat.composer.thoughtLevel" })}</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={state.thoughtLevel}
-            onValueChange={(value) => dispatch({ type: "composer/setThoughtLevel", level: value })}
+            onValueChange={(value) => void setThoughtLevel(value)}
           >
-            {MOCK_THOUGHT_LEVELS.map((level) => (
+            {THOUGHT_LEVELS.map((level) => (
               <DropdownMenuRadioItem key={level} value={level}>
                 {intl.formatMessage({ id: `chat.composer.thoughtLevel.${level}` })}
               </DropdownMenuRadioItem>

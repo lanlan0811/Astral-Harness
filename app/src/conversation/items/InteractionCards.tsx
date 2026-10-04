@@ -12,12 +12,34 @@ import type { ConversationItem, InteractionOption } from "../../store/types";
  * number, a label and a scope description, and buttons fight that. Numbers are
  * shown because the whole card is answerable from the keyboard.
  */
-export function PermissionCard({ item }: { item: Extract<ConversationItem, { kind: "permission" }> }) {
+/** The sidecar names these; the UI owns the wording. */
+const OPTION_LABEL_KEYS: Record<string, string> = {
+  allow: "chat.permission.allow",
+  deny: "chat.permission.deny",
+};
+
+export function PermissionCard({
+  item,
+  onRespond,
+}: {
+  item: Extract<ConversationItem, { kind: "permission" }>;
+  /** Resolves the sidecar's parked turn. Omitted only where nothing is running. */
+  onRespond?: (approved: boolean) => void;
+}) {
   const intl = useIntl();
   const [activeIndex, setActiveIndex] = useState(0);
   const [answered, setAnswered] = useState<string | null>(null);
+  const labelOf = (option: InteractionOption) =>
+    OPTION_LABEL_KEYS[option.id]
+      ? intl.formatMessage({ id: OPTION_LABEL_KEYS[option.id] })
+      : option.label;
 
-  const choose = (optionId: string) => setAnswered(optionId);
+  // The sidecar offers exactly two options and keys them as such; anything else is a
+  // deny, because "allow" is the only one that can resume the turn.
+  const choose = (optionId: string) => {
+    setAnswered(optionId);
+    onRespond?.(optionId === "allow");
+  };
   const activeOption = answered ? item.options.find((option) => option.id === answered) : null;
 
   return (
@@ -38,7 +60,7 @@ export function PermissionCard({ item }: { item: Extract<ConversationItem, { kin
 
         {answered ? (
           <p className="rounded-xl bg-selected px-3 py-2 text-ui-base text-foreground">
-            {activeOption?.label}
+            {activeOption ? labelOf(activeOption) : ""}
           </p>
         ) : (
           <div role="listbox" className="space-y-1">
