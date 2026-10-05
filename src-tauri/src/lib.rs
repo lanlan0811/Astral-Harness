@@ -1,4 +1,4 @@
-mod sidecar;
+pub mod sidecar;
 
 use sidecar::Sidecar;
 

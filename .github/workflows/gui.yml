@@ -82,40 +82,38 @@ jobs:
 
       # `beforeBuildCommand` builds the webview bundle and the sidecar for us.
       #
-      # Diagnostics live inside this step rather than in a follow-up one: reading a job
-      # log through the API needs admin rights, so a red build would otherwise be a bare
-      # "exit code 1". Echoing the tail of the log as workflow commands turns it into
-      # annotations, which are public.
-      #
-      # `|| status=$?` rather than checking `$?` afterwards: GitHub runs bash with -e, so
-      # a failing pipeline would exit the step before any of the reporting below ran.
+      # continue-on-error so the reporting step below always runs. Reading a job log
+      # through the API needs admin rights, so annotations are the only channel out.
       - name: Build
+        id: build
+        continue-on-error: true
         shell: bash
         run: |
-          # Keep this simple. An earlier version stripped ANSI colour codes with a
-          # $'...' sed expression; when that expression produced no output the annotation
-          # came out empty and GitHub dropped it silently, which cost a debugging round.
-          escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
           status=0
           npm run tauri build -- --target ${{ matrix.target }} 2>&1 | tee build.log || status=$?
-          if [ "$status" -ne 0 ]; then
-            # Target the primary error lines. GitHub keeps roughly ten annotations per
-            # step, and dumping the tail filled that budget with `help:` and note lines
-            # while the actual `error[E....]` line got pushed out.
-            matched=0
-            while IFS= read -r line; do
-              [ -n "$line" ] || continue
-              matched=1
-              echo "::error::$(escape "$line")"
-            done < <(grep -aE '^(error(\[E[0-9]+\])?|thread .* panicked)' build.log | head -9)
-            if [ "$matched" -eq 0 ]; then
-              tail -9 build.log | while IFS= read -r line; do
-                [ -n "$line" ] || continue
-                echo "::error::$(escape "$line")"
-              done
-            fi
-          fi
           exit "$status"
+
+      # Deliberately a separate step: GitHub caps annotations per *step*, and the build
+      # step's allowance is consumed by its own log. This one gets a fresh budget, which is
+      # why the actual `error[E....]` lines were missing before.
+      - name: Report build errors
+        if: always()
+        shell: bash
+        run: |
+          if [ ! -f build.log ] || ! grep -qaE '^error(\[E[0-9]+\])?:|^error: could not compile' build.log; then
+            echo "no build errors recorded"
+            exit 0
+          fi
+          escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
+          {
+            grep -aE '^error(\[E[0-9]+\])?:' build.log | head -6
+            echo "--- locations ---"
+            grep -aE '^ *--> src/' build.log | head -6
+          } | while IFS= read -r line; do
+            [ -n "$line" ] || continue
+            echo "::error::$(escape "$line")"
+          done
+          exit 1
 
       - uses: actions/upload-artifact@v4
         with:
