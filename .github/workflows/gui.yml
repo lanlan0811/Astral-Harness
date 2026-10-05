@@ -92,7 +92,8 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
+          # Strip cargo's colour codes as well, so the annotation reads as plain text.
+          escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g' $'s/\033\\[[0-9;]*m//g'; }
           status=0
           npm run tauri build -- --target ${{ matrix.target }} 2>&1 | tee build.log || status=$?
           if [ "$status" -ne 0 ]; then
