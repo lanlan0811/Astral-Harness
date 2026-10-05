@@ -152,6 +152,17 @@ jobs:
             grep -aE "$errors" build.clean.log | head -6 | report || true
             grep -aE '^ *--> src/' build.clean.log | head -4 | report || true
             if grep -qaE "$errors" build.clean.log; then found=1; fi
+
+            # What the bundler actually produced. A missing format is otherwise
+            # indistinguishable from a bad glob, and the release notes promise an .msi.
+            {
+              echo "--- installers produced ---"
+              find src-tauri/target -path '*release/bundle*' \
+                \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' \) 2>/dev/null | sort
+              echo "--- bundler log ---"
+              grep -aiE 'wix|msi|nsis|bundl' build.clean.log | head -8
+              echo "(end)"
+            } | report || true
           fi
 
           [ "$found" -eq 1 ] && exit 1
@@ -193,6 +204,17 @@ jobs:
       # Unsigned on purpose for the beta: macOS users clear Gatekeeper once, and Windows
       # SmartScreen warns. The notes spell out the workaround. Wiring real signing is a
       # follow-up, not a half-finished step here.
+      # What actually came down, so a build that produced the wrong files and a glob that
+      # looks in the wrong place are distinguishable without opening the job log.
+      - name: List the downloaded installers
+        shell: bash
+        run: |
+          escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
+          find installers -type f | sort | while IFS= read -r line; do
+            [ -n "$line" ] || continue
+            echo "::error::$(escape "$line")"
+          done
+
       - uses: softprops/action-gh-release@v2
         with:
           body_path: docs/releases/${{ github.ref_name }}.en.md
