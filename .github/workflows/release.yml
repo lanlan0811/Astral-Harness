@@ -173,9 +173,10 @@ jobs:
   # files — the macOS dmg was uploaded as an artifact and then dropped. This job downloads
   # every leg's artifact and attaches them all to a single release.
   #
-  # Artifacts land in per-artifact subdirectories rather than merged, so two platforms that
-  # ever produce the same installer filename surface as a clash instead of silently
-  # overwriting each other.
+  # Merged into one directory, so the globs below have to be recursive: upload-artifact
+  # preserves the tree under the common ancestor of the matched files, so what arrives is
+  # installers/nsis/*.exe and not installers/*.exe. Merging is safe now that each leg is
+  # pinned to its own --bundles — no two platforms emit the same filename.
   publish:
     name: Publish release
     needs: [build]
@@ -187,6 +188,7 @@ jobs:
         with:
           pattern: astral-*-installers
           path: installers
+          merge-multiple: true
 
       # Unsigned on purpose for the beta: macOS users clear Gatekeeper once, and Windows
       # SmartScreen warns. The notes spell out the workaround. Wiring real signing is a
@@ -194,5 +196,8 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           body_path: docs/releases/${{ github.ref_name }}.en.md
-          files: installers/*/*
+          files: |
+            installers/**/*.exe
+            installers/**/*.msi
+            installers/**/*.dmg
           fail_on_unmatched_files: true
