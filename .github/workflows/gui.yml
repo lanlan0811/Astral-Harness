@@ -96,24 +96,39 @@ jobs:
       # Deliberately a separate step: GitHub caps annotations per *step*, and the build
       # step's allowance is consumed by its own log. This one gets a fresh budget, which is
       # why the actual `error[E....]` lines were missing before.
+      #
+      # The pattern is deliberately case-insensitive and includes `Caused by:` — the Rust
+      # compiler says `error:` in lower case but the Tauri bundler says `Error`, and
+      # matching only the former hid a bundling failure completely.
       - name: Report build errors
         if: always()
         shell: bash
         run: |
-          if [ ! -f build.log ] || ! grep -qaE '^error(\[E[0-9]+\])?:|^error: could not compile' build.log; then
-            echo "no build errors recorded"
-            exit 0
-          fi
           escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
+          report() {
+            while IFS= read -r line; do
+              [ -n "$line" ] || continue
+              echo "::error::$(escape "$line")"
+            done
+          }
+
+          found=0
+          if [ -f build.log ]; then
+            grep -aiE '^(error|thread .* panicked|caused by:)' build.log | head -6 | report
+            grep -aE '^ *--> src/' build.log | head -4 | report
+            if grep -qaE '^(error|thread .* panicked|caused by:)' build.log; then found=1; fi
+          fi
+
+          # Always report what the bundle directory actually holds, so "the bundler failed"
+          # and "the artifacts landed somewhere else" are distinguishable.
           {
-            grep -aE '^error(\[E[0-9]+\])?:' build.log | head -6
-            echo "--- locations ---"
-            grep -aE '^ *--> src/' build.log | head -6
-          } | while IFS= read -r line; do
-            [ -n "$line" ] || continue
-            echo "::error::$(escape "$line")"
-          done
-          exit 1
+            echo "--- bundle output ---"
+            find src-tauri/target -maxdepth 4 -name 'bundle' -o -maxdepth 5 \( -name '*.dmg' -o -name '*.exe' -o -name '*.msi' -o -name '*.app' \) 2>/dev/null | head -5
+            echo "(end)"
+          } | report
+
+          [ "$found" -eq 1 ] && exit 1
+          exit 0
 
       - uses: actions/upload-artifact@v4
         with:
