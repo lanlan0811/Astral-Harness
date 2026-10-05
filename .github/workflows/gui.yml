@@ -85,15 +85,16 @@ jobs:
       # Diagnostics live inside this step rather than in a follow-up one: reading a job
       # log through the API needs admin rights, so a red build would otherwise be a bare
       # "exit code 1". Echoing the tail of the log as workflow commands turns it into
-      # annotations, which are public. A separate step guarded on
-      # `steps.build.outcome` was tried first and got skipped instead of running.
+      # annotations, which are public.
+      #
+      # `|| status=$?` rather than checking `$?` afterwards: GitHub runs bash with -e, so
+      # a failing pipeline would exit the step before any of the reporting below ran.
       - name: Build
         shell: bash
         run: |
           escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
-          set -o pipefail
-          npm run tauri build -- --target ${{ matrix.target }} 2>&1 | tee build.log
-          status=$?
+          status=0
+          npm run tauri build -- --target ${{ matrix.target }} 2>&1 | tee build.log || status=$?
           if [ "$status" -ne 0 ]; then
             echo "----- build output (tail) -----"
             tail -40 build.log | while IFS= read -r line; do

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capabilities the Astral window needs.",
+  "description": "Capabilities the Astral window needs. The Node sidecar is the only process the app is allowed to spawn.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -9,12 +9,10 @@
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
-    "shell:allow-execute",
     {
       "identifier": "shell:allow-execute",
       "allow": [{ "name": "binaries/node", "sidecar": true }]
     },
-    "shell:allow-spawn",
     {
       "identifier": "shell:allow-spawn",
       "allow": [{ "name": "binaries/node", "sidecar": true }]
