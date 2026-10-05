@@ -16,25 +16,47 @@ env:
   NODE_VERSION_FILE: .nvmrc
 
 jobs:
-  desktop:
+  # Release notes live in the repository, not in the workflow — one file per tag, in both
+  # languages. Checking before anything is built means a tag pushed without notes stops in
+  # seconds rather than after two desktop builds.
+  #
+  # `shell: bash` is explicit because the default on windows-latest is PowerShell, where
+  # this POSIX test is a parse error rather than a missing-file error.
+  notes:
+    name: Release notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify the release notes exist
+        shell: bash
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.en.md"
+          if [ ! -f "$notes" ]; then
+            echo "::error::Missing $notes. Write the release notes before tagging."
+            exit 1
+          fi
+          echo "Release notes: $notes"
+
+  build:
     name: ${{ matrix.label }}
+    needs: [notes]
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             label: Windows x64
-            # Exactly one matrix leg publishes; the others only upload their artifacts.
-            publish: true
             args: '--target x86_64-pc-windows-msvc'
-            node-target: x86_64-pc-windows-msvc
-            rust-target: x86_64-pc-windows-msvc
+            node-targets: 'x86_64-pc-windows-msvc'
+            rust-target: 'x86_64-pc-windows-msvc'
           - os: macos-14
             label: macOS universal
-            publish: false
             args: '--target universal-apple-darwin'
+            # Space-separated: `rustup target add` takes a list, and a comma makes it
+            # reject the whole thing as an unknown target name.
             node-targets: 'aarch64-apple-darwin x86_64-apple-darwin'
-            rust-target: aarch64-apple-darwin,x86_64-apple-darwin
+            rust-target: 'aarch64-apple-darwin x86_64-apple-darwin'
 
     runs-on: ${{ matrix.os }}
 
@@ -46,20 +68,8 @@ jobs:
           node-version-file: ${{ env.NODE_VERSION_FILE }}
           cache: npm
 
-      # Release notes live in the repository, not in the workflow — one file per tag, in
-      # both languages. Failing here rather than at publish time means a tag pushed
-      # without notes stops before anything is built.
-      - name: Verify the release notes exist
-        if: matrix.publish
-        run: |
-          notes="docs/releases/${GITHUB_REF_NAME}.en.md"
-          if [ ! -f "$notes" ]; then
-            echo "::error::Missing $notes. Write the release notes before tagging."
-            exit 1
-          fi
-          echo "Release notes: $notes"
-
       - name: Install Rust targets
+        shell: bash
         run: |
           rustup toolchain install stable --profile minimal
           rustup target add ${{ matrix.rust-target }}
@@ -76,12 +86,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          targets="${NODE_TARGETS:-${{ matrix.node-target }}}"
-          for target in $targets; do
+          for target in ${{ matrix.node-targets }}; do
             bash scripts/fetch-node.sh "$target"
           done
-        env:
-          NODE_TARGETS: ${{ matrix.node-targets }}
+
+      # Tauri resolves `externalBin` by appending the target triple to the name, and for
+      # this build cargo reports TARGET=universal-apple-darwin. Neither per-arch binary
+      # satisfies that, and tauri-build's copy step fails outright on a missing source, so
+      # the universal sidecar has to be assembled here under that exact name.
+      - name: Assemble the universal Node sidecar
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          lipo -create \
+            src-tauri/binaries/node-aarch64-apple-darwin \
+            src-tauri/binaries/node-x86_64-apple-darwin \
+            -output src-tauri/binaries/node-universal-apple-darwin
+          src-tauri/binaries/node-universal-apple-darwin --version
 
       # Node 22 is the last line that still runs on macOS 13.0, so pin the deployment
       # target rather than inheriting whatever the runner image defaults to.
@@ -101,16 +123,31 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # One release holding both platforms. Each matrix leg only ever sees the installers from
+  # its own runner, so publishing from inside a leg could never attach the other platform's
+  # files — the macOS dmg was uploaded as an artifact and then dropped. This job downloads
+  # every leg's artifact and attaches them all to a single release.
+  #
+  # Artifacts land in per-artifact subdirectories rather than merged, so two platforms that
+  # ever produce the same installer filename surface as a clash instead of silently
+  # overwriting each other.
+  publish:
+    name: Publish release
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: astral-*-installers
+          path: installers
+
       # Unsigned on purpose for the beta: macOS users clear Gatekeeper once, and Windows
       # SmartScreen warns. The notes spell out the workaround. Wiring real signing is a
       # follow-up, not a half-finished step here.
-      - name: Publish to the GitHub release
-        if: matrix.publish
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           body_path: docs/releases/${{ github.ref_name }}.en.md
-          files: |
-            src-tauri/target/*/release/bundle/nsis/*.exe
-            src-tauri/target/*/release/bundle/msi/*.msi
-            src-tauri/target/*/release/bundle/dmg/*.dmg
-          fail_on_unmatched_files: false
+          files: installers/*/*
+          fail_on_unmatched_files: true
