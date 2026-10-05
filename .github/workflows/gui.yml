@@ -81,27 +81,26 @@ jobs:
         run: bash scripts/fetch-node.sh "${{ matrix.target }}"
 
       # `beforeBuildCommand` builds the webview bundle and the sidecar for us.
+      #
+      # Diagnostics live inside this step rather than in a follow-up one: reading a job
+      # log through the API needs admin rights, so a red build would otherwise be a bare
+      # "exit code 1". Echoing the tail of the log as workflow commands turns it into
+      # annotations, which are public. A separate step guarded on
+      # `steps.build.outcome` was tried first and got skipped instead of running.
       - name: Build
-        id: build
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run tauri build -- --target ${{ matrix.target }} 2>&1 | tee build.log
-
-      # Reading a job log through the API needs admin rights, so a red build is otherwise
-      # just "exit code 1" with no way to see why. Echoing the compiler and linker lines as
-      # workflow commands turns them into annotations, which are public.
-      - name: Surface build errors
-        if: steps.build.outcome == 'failure'
         shell: bash
         run: |
           escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
-          grep -aiE 'error(\[E[0-9]+\])?|panicked|could not|unable to|failed to|not found' build.log \
-            | head -40 \
-            | while IFS= read -r line; do
-                echo "::error::$(escape "$line")"
-              done
-          exit 1
+          set -o pipefail
+          npm run tauri build -- --target ${{ matrix.target }} 2>&1 | tee build.log
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "----- build output (tail) -----"
+            tail -40 build.log | while IFS= read -r line; do
+              echo "::error::$(escape "$line")"
+            done
+          fi
+          exit "$status"
 
       - uses: actions/upload-artifact@v4
         with:
