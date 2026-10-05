@@ -78,7 +78,7 @@ impl Default for Sidecar {
 ///
 /// `externalBin` renames the Node download to `node-<target-triple>`, so the shell plugin
 /// resolves whichever architecture is being built or run.
-fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
+pub fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
     let resource_dir = app
         .path()
         .resource_dir()
