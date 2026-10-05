@@ -92,13 +92,16 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          # Strip cargo's colour codes as well, so the annotation reads as plain text.
-          escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g' $'s/\033\\[[0-9;]*m//g'; }
+          # Keep this simple. An earlier version stripped ANSI colour codes with a
+          # $'...' sed expression; when that expression produced no output the annotation
+          # came out empty and GitHub dropped it silently, which cost a debugging round.
+          escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
           status=0
           npm run tauri build -- --target ${{ matrix.target }} 2>&1 | tee build.log || status=$?
           if [ "$status" -ne 0 ]; then
             echo "----- build output (tail) -----"
             tail -40 build.log | while IFS= read -r line; do
+              [ -n "$line" ] || continue
               echo "::error::$(escape "$line")"
             done
           fi
