@@ -91,12 +91,16 @@ fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
         ));
     }
 
+    // The shell plugin's error type has no `Into<String>`, so both of these need an
+    // explicit conversion rather than a bare `?`.
     let (mut events, child) = app
         .shell()
-        .sidecar("node")?
+        .sidecar("node")
+        .map_err(|error| format!("could not resolve the Node sidecar: {error}"))?
         .args([entry.to_string_lossy().to_string()])
         .env("ASTRAL_PROMPTS_DIR", &prompts)
-        .spawn()?;
+        .spawn()
+        .map_err(|error| format!("could not start the Node sidecar: {error}"))?;
 
     app.state::<Sidecar>()
         .child

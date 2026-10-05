@@ -99,11 +99,21 @@ jobs:
           status=0
           npm run tauri build -- --target ${{ matrix.target }} 2>&1 | tee build.log || status=$?
           if [ "$status" -ne 0 ]; then
-            echo "----- build output (tail) -----"
-            tail -40 build.log | while IFS= read -r line; do
+            # Target the primary error lines. GitHub keeps roughly ten annotations per
+            # step, and dumping the tail filled that budget with `help:` and note lines
+            # while the actual `error[E....]` line got pushed out.
+            matched=0
+            while IFS= read -r line; do
               [ -n "$line" ] || continue
+              matched=1
               echo "::error::$(escape "$line")"
-            done
+            done < <(grep -aE '^(error(\[E[0-9]+\])?|thread .* panicked)' build.log | head -9)
+            if [ "$matched" -eq 0 ]; then
+              tail -9 build.log | while IFS= read -r line; do
+                [ -n "$line" ] || continue
+                echo "::error::$(escape "$line")"
+              done
+            fi
           fi
           exit "$status"
 
