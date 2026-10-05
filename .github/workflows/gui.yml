@@ -97,9 +97,11 @@ jobs:
       # step's allowance is consumed by its own log. This one gets a fresh budget, which is
       # why the actual `error[E....]` lines were missing before.
       #
-      # The pattern is deliberately case-insensitive and includes `Caused by:` — the Rust
-      # compiler says `error:` in lower case but the Tauri bundler says `Error`, and
-      # matching only the former hid a bundling failure completely.
+      # rustc and the Tauri bundler both colourise their output, so a real error line starts
+      # with an escape sequence and never matches `^error`. The log is stripped once into
+      # build.clean.log and every match runs against that. The ESC byte is written with $'...'
+      # because BSD sed on the macOS runners has no `\x` escape — using one there produced an
+      # empty `s///` expression, and GitHub silently drops empty annotations.
       - name: Report build errors
         if: always()
         shell: bash
@@ -112,11 +114,17 @@ jobs:
             done
           }
 
+          # `error:` covers the rustc codes and `Error ` covers the bundler's capitalised
+          # wording; `thread ... panicked` covers a panic inside the build itself.
+          errors='^(error(\[E[0-9]+\])?[,:]?|Error |thread .* panicked)'
+
           found=0
           if [ -f build.log ]; then
-            grep -aiE '^(error|thread .* panicked|caused by:)' build.log | head -6 | report
-            grep -aE '^ *--> src/' build.log | head -4 | report
-            if grep -qaE '^(error|thread .* panicked|caused by:)' build.log; then found=1; fi
+            sed $'s/\033\\[[0-9;]*m//g' build.log > build.clean.log
+
+            grep -aE "$errors" build.clean.log | head -6 | report
+            grep -aE '^ *--> src/' build.clean.log | head -4 | report
+            if grep -qaE "$errors" build.clean.log; then found=1; fi
           fi
 
           # Always report what the bundle directory actually holds, so "the bundler failed"

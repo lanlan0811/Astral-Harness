@@ -4,6 +4,9 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use serde_json::{json, Value};
+// The shell plugin hands back a tokio receiver, not the std one used for request/reply
+// below, so the two cannot share a name.
+use tauri::async_runtime::Receiver as AsyncReceiver;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
@@ -40,7 +43,7 @@ impl Sidecar {
         let child = guard
             .as_mut()
             .ok_or_else(|| "the agent runtime is not running".to_string())?;
-        child.write(line).map_err(|error| format!("could not reach the agent runtime: {error}"))
+        child.write(line.as_bytes()).map_err(|error| format!("could not reach the agent runtime: {error}"))
     }
 
     fn take_waiter(&self, id: &str) -> Option<Sender<String>> {
@@ -116,11 +119,11 @@ fn spawn_sidecar(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-async fn pump(app: AppHandle, events: &mut Receiver<CommandEvent>) {
+async fn pump(app: AppHandle, events: &mut AsyncReceiver<CommandEvent>) {
     let mut stdout_tail = String::new();
     let mut stderr_tail = String::new();
 
-    while let Some(event) = events.recv() {
+    while let Some(event) = events.recv().await {
         match event {
             CommandEvent::Stdout(bytes) => {
                 stdout_tail.push_str(&String::from_utf8_lossy(&bytes));
