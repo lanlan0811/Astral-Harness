@@ -47,12 +47,16 @@ jobs:
         include:
           - os: windows-latest
             label: Windows x64
-            args: '--target x86_64-pc-windows-msvc'
+            # --bundles keeps each leg to its own installers. Without it the bundler also
+            # builds NSIS on the macOS runner (NSIS is not gated to Windows in
+            # tauri-bundler), so a release would carry a second, macOS-built Windows
+            # installer alongside the real one.
+            args: '--target x86_64-pc-windows-msvc --bundles nsis,msi'
             node-targets: 'x86_64-pc-windows-msvc'
             rust-target: 'x86_64-pc-windows-msvc'
           - os: macos-14
             label: macOS universal
-            args: '--target universal-apple-darwin'
+            args: '--target universal-apple-darwin --bundles app,dmg'
             # Space-separated: `rustup target add` takes a list, and a comma makes it
             # reject the whole thing as an unknown target name.
             node-targets: 'aarch64-apple-darwin x86_64-apple-darwin'
@@ -107,10 +111,51 @@ jobs:
 
       # Node 22 is the last line that still runs on macOS 13.0, so pin the deployment
       # target rather than inheriting whatever the runner image defaults to.
+      #
+      # continue-on-error so the reporting step below always runs, and `shell: bash` so the
+      # tee and the exit status behave the same on both legs. Reading a job log through the
+      # API needs admin rights, so annotations are the only channel out.
       - name: Build
-        run: npm run tauri build -- ${{ matrix.args }}
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          status=0
+          npm run tauri build -- ${{ matrix.args }} 2>&1 | tee build.log || status=$?
+          exit "$status"
         env:
           MACOSX_DEPLOYMENT_TARGET: '13.0'
+
+      # Mirrors the reporting step in gui.yml. rustc and the bundler colourise their
+      # output, so a real error line starts with an escape sequence and never matches
+      # `^error`; the log is stripped once and matched against that. The ESC byte is
+      # written with $'...' because BSD sed on the macOS runners has no `\x` escape.
+      - name: Report build errors
+        if: always()
+        shell: bash
+        run: |
+          escape() { printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g'; }
+          report() {
+            while IFS= read -r line; do
+              [ -n "$line" ] || continue
+              echo "::error::$(escape "$line")"
+            done
+          }
+          errors='^(error(\[E[0-9]+\])?[,:]?|Error |thread .* panicked)'
+
+          found=0
+          if [ -f build.log ]; then
+            sed $'s/\033\\[[0-9;]*m//g' build.log > build.clean.log
+
+            # `|| true` is load-bearing: grep exits 1 when it matches nothing, and this
+            # script runs under -e -o pipefail.
+            grep -aE "$errors" build.clean.log | head -6 | report || true
+            grep -aE '^ *--> src/' build.clean.log | head -4 | report || true
+            if grep -qaE "$errors" build.clean.log; then found=1; fi
+          fi
+
+          [ "$found" -eq 1 ] && exit 1
+          exit 0
 
       - name: Collect installers
         uses: actions/upload-artifact@v4
