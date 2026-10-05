@@ -122,8 +122,11 @@ jobs:
           if [ -f build.log ]; then
             sed $'s/\033\\[[0-9;]*m//g' build.log > build.clean.log
 
-            grep -aE "$errors" build.clean.log | head -6 | report
-            grep -aE '^ *--> src/' build.clean.log | head -4 | report
+            # `|| true` is load-bearing: grep exits 1 when it matches nothing, and GitHub
+            # runs this with -e -o pipefail, so a *clean* build used to fail the step right
+            # here and skip the artifact upload. Same for head closing the pipe early.
+            grep -aE "$errors" build.clean.log | head -6 | report || true
+            grep -aE '^ *--> src/' build.clean.log | head -4 | report || true
             if grep -qaE "$errors" build.clean.log; then found=1; fi
           fi
 
@@ -131,7 +134,7 @@ jobs:
           # and "the artifacts landed somewhere else" are distinguishable.
           {
             echo "--- bundle output ---"
-            find src-tauri/target -maxdepth 4 -name 'bundle' -o -maxdepth 5 \( -name '*.dmg' -o -name '*.exe' -o -name '*.msi' -o -name '*.app' \) 2>/dev/null | head -5
+            find src-tauri/target -maxdepth 4 -name 'bundle' -o -maxdepth 5 \( -name '*.dmg' -o -name '*.exe' -o -name '*.msi' -o -name '*.app' \) 2>/dev/null | head -5 || true
             echo "(end)"
           } | report
 
